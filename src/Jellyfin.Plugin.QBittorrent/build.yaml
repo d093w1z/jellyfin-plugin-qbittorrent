@@ -3,7 +3,7 @@ guid: "f6a0e4c2-3b3e-4b9a-9f4e-8a4a1d2c9b7d"
 version: "0.1.0.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
-owner: "jellyrent"
+owner: "d093w1z"
 overview: "Remotely manage a qBittorrent instance from within Jellyfin."
 description: >
   Browse, search, add and control torrents on a qBittorrent instance without

@@ -1,0 +1,65 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test -c Release
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build, package and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGELOG: ${{ github.event.head_commit.message || 'Manual release' }}
+        run: |
+          set -euo pipefail
+          meta=src/Jellyfin.Plugin.QBittorrent/build.yaml
+
+          # Jellyfin only updates to a strictly higher version, so every release
+          # takes major.minor.patch from build.yaml plus the run number as the 4th part.
+          base=$(yq -r '.version' "$meta" | cut -d. -f1-3)
+          version="$base.$GITHUB_RUN_NUMBER"
+          tag="v$version"
+
+          dotnet publish src/Jellyfin.Plugin.QBittorrent -c Release -o publish \
+            -p:Version="$version" -p:AssemblyVersion="$version" -p:FileVersion="$version"
+          zip -j qbittorrent-manager.zip publish/Jellyfin.Plugin.QBittorrent.dll
+
+          yq -o=json "$meta" | jq \
+            --arg version "$version" \
+            --arg changelog "${CHANGELOG%%$'\n'*}" \
+            --arg sourceUrl "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/qbittorrent-manager.zip" \
+            --arg checksum "$(md5sum qbittorrent-manager.zip | cut -d' ' -f1)" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '[{guid, name, description, overview, owner, category,
+               versions: [{version: $version, changelog: $changelog, targetAbi, sourceUrl: $sourceUrl, checksum: $checksum, timestamp: $timestamp}]}]' \
+            > manifest.json
+
+          gh release create "$tag" qbittorrent-manager.zip manifest.json \
+            --target "$GITHUB_SHA" --title "$tag" --notes "${CHANGELOG%%$'\n'*}" --latest

@@ -38,8 +38,35 @@ Produce a plugin artifact:
 dotnet publish src/Jellyfin.Plugin.QBittorrent -c Release -o ./artifacts
 ```
 
-Copy the contents of `./artifacts` into your Jellyfin server's
-`plugins/qBittorrent Manager_<version>/` directory and restart Jellyfin.
+## Install
+
+Every push to `main` publishes a GitHub release with the plugin zip and a
+Jellyfin repository manifest.
+
+**Plugin repository (auto-updates):** in Jellyfin go to Dashboard → Plugins →
+Repositories, add
+
+```text
+https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/latest/download/manifest.json
+```
+
+then install *qBittorrent Manager* from the Catalog and restart. Jellyfin's
+"Update Plugins" scheduled task picks up new releases; restart Jellyfin to
+load them.
+
+**Manual, from the Jellyfin machine's terminal:**
+
+```bash
+PLUGINS=/var/lib/jellyfin/plugins   # adjust for your install / Docker volume
+rm -rf "$PLUGINS"/"qBittorrent Manager"*
+mkdir -p "$PLUGINS/qBittorrent Manager"
+curl -fsSL -o /tmp/qbt.zip https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/latest/download/qbittorrent-manager.zip
+unzip -o /tmp/qbt.zip -d "$PLUGINS/qBittorrent Manager" && rm /tmp/qbt.zip
+chown -R jellyfin:jellyfin "$PLUGINS/qBittorrent Manager"
+systemctl restart jellyfin          # or: docker restart jellyfin
+```
+
+Use one method or the other; don't mix a manual copy with a repository install.
 
 ## Compatibility
 

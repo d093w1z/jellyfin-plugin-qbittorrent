@@ -1,0 +1,20 @@
+[
+  {
+    "guid": "f6a0e4c2-3b3e-4b9a-9f4e-8a4a1d2c9b7d",
+    "name": "qBittorrent Manager",
+    "description": "Browse, search, add and control torrents on a qBittorrent instance without exposing qBittorrent credentials or network access to the browser. All communication is proxied through the Jellyfin server and gated by Jellyfin authentication.\n",
+    "overview": "Remotely manage a qBittorrent instance from within Jellyfin.",
+    "owner": "jellyrent",
+    "category": "General",
+    "versions": [
+      {
+        "version": "0.1.0.3",
+        "changelog": "Serve the plugin manifest from a fixed URL on the manifest branch",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/download/v0.1.0.3/qbittorrent-manager.zip",
+        "checksum": "31a03c3aea3e38c46f8a42a3129532b3",
+        "timestamp": "2026-09-28T21:22:38Z"
+      }
+    ]
+  }
+]

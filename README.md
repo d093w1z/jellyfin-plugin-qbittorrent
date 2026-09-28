@@ -40,14 +40,14 @@ dotnet publish src/Jellyfin.Plugin.QBittorrent -c Release -o ./artifacts
 
 ## Install
 
-Every push to `main` publishes a GitHub release with the plugin zip and a
-Jellyfin repository manifest.
+Every push to `main` publishes a GitHub release with the plugin zip and adds
+it to the Jellyfin repository manifest on the `manifest` branch.
 
 **Plugin repository (auto-updates):** in Jellyfin go to Dashboard → Plugins →
 Repositories, add
 
 ```text
-https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/latest/download/manifest.json
+https://raw.githubusercontent.com/d093w1z/jellyfin-plugin-qbittorrent/manifest/manifest.json
 ```
 
 then install *qBittorrent Manager* from the Catalog and restart. Jellyfin's

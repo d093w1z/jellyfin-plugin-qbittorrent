@@ -51,15 +51,33 @@ jobs:
             -p:Version="$version" -p:AssemblyVersion="$version" -p:FileVersion="$version"
           zip -j qbittorrent-manager.zip publish/Jellyfin.Plugin.QBittorrent.dll
 
+          gh release create "$tag" qbittorrent-manager.zip \
+            --target "$GITHUB_SHA" --title "$tag" --notes "${CHANGELOG%%$'\n'*}" --latest
+
+          # The plugin repository manifest lives on the `manifest` branch at a fixed URL,
+          # keeping every released version so Jellyfin always sees the newest one.
+          if git fetch -q --depth=1 origin manifest 2>/dev/null; then
+            parent=(-p FETCH_HEAD)
+            git show FETCH_HEAD:manifest.json > previous.json
+          else
+            parent=()
+            echo '[{"versions": []}]' > previous.json
+          fi
+
           yq -o=json "$meta" | jq \
+            --slurpfile previous previous.json \
             --arg version "$version" \
             --arg changelog "${CHANGELOG%%$'\n'*}" \
             --arg sourceUrl "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/qbittorrent-manager.zip" \
             --arg checksum "$(md5sum qbittorrent-manager.zip | cut -d' ' -f1)" \
             --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '[{guid, name, description, overview, owner, category,
-               versions: [{version: $version, changelog: $changelog, targetAbi, sourceUrl: $sourceUrl, checksum: $checksum, timestamp: $timestamp}]}]' \
+               versions: ([{version: $version, changelog: $changelog, targetAbi, sourceUrl: $sourceUrl, checksum: $checksum, timestamp: $timestamp}]
+                 + ($previous[0][0].versions | map(select(.version != $version))))}]' \
             > manifest.json
 
-          gh release create "$tag" qbittorrent-manager.zip manifest.json \
-            --target "$GITHUB_SHA" --title "$tag" --notes "${CHANGELOG%%$'\n'*}" --latest
+          export GIT_AUTHOR_NAME="github-actions[bot]" GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+          tree=$(printf '100644 blob %s\tmanifest.json\n' "$(git hash-object -w manifest.json)" | git mktree)
+          commit=$(git commit-tree "$tree" "${parent[@]}" -m "Release $version")
+          git push -q origin "$commit:refs/heads/manifest"

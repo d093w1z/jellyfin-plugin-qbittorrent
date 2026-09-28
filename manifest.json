@@ -17,11 +17,19 @@
       },
       {
         "version": "0.1.0.3",
-        "changelog": "Serve the plugin manifest from a fixed URL on the manifest branch",
+        "changelog": "- Serve the plugin manifest from a fixed URL on the manifest branch",
         "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/download/v0.1.0.3/qbittorrent-manager.zip",
         "checksum": "31a03c3aea3e38c46f8a42a3129532b3",
         "timestamp": "2026-09-28T21:22:38Z"
+      },
+      {
+        "version": "0.1.0.2",
+        "changelog": "- Publish releases and a Jellyfin plugin repository manifest from main\n- Overhaul plugin UI with a minimalist design\n- Initial commit: Jellyfin qBittorrent management plugin",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/download/v0.1.0.2/qbittorrent-manager.zip",
+        "checksum": "cb003a1b4e76bb3ce88beed0c9bea9d7",
+        "timestamp": "2026-09-28T21:18:20Z"
       }
     ]
   }

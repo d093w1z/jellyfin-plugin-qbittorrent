@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jellyfin.Plugin.QBittorrent/Jellyfin.Plugin.QBittorrent.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jellyfin.Plugin.QBittorrent.Tests/Jellyfin.Plugin.QBittorrent.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>qBittorrent</title>
+</head>
+<body>
+    <div id="QBittorrentPage" data-role="page" class="page type-interior" data-require="emby-input,emby-button">
+        <div data-role="content">
+            <div class="content-primary" style="max-width:900px;color:#e6ece8">
+                <h1 style="display:flex;align-items:center;justify-content:space-between;gap:1em;font-size:1.5rem;font-weight:600;margin:0 0 1.1em">
+                    <span>qBittorrent</span>
+                    <a href="#/configurationpage?name=qBittorrent%20Manager" style="font-size:0.62rem;font-weight:500;color:#97a29a;text-decoration:none">&#9881; Settings</a>
+                </h1>
+
+                <div id="QbtMeters" style="display:flex;flex-wrap:wrap;gap:2.5em;align-items:flex-end;padding-bottom:1em;margin-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.12)"></div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:1em 1.5em;align-items:center;margin-bottom:1.1em">
+                    <input id="QbtSearch" type="search" is="emby-input" placeholder="Search torrents" style="flex:1 1 220px" />
+                    <div id="QbtTabs" style="display:flex;flex-wrap:wrap;gap:1.1em"></div>
+                    <button id="QbtAddButton" is="emby-button" class="raised" style="margin-left:auto">+ Add</button>
+                </div>
+
+                <div id="QbtList"></div>
+
+                <dialog id="QbtAddDialog" style="background:#171b19;color:#e6ece8;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:1.5em;max-width:420px;width:90vw">
+                    <form id="QbtAddForm" method="dialog">
+                        <h2 style="margin:0 0 1em;font-size:1.1rem;font-weight:600">Add torrent</h2>
+
+                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Magnet link or URL</label>
+                        <input id="QbtAddMagnet" is="emby-input" type="text" placeholder="magnet:?xt=..." style="width:100%;margin-bottom:0.9em" />
+
+                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Or choose a .torrent file</label>
+                        <input id="QbtAddFile" type="file" accept=".torrent" style="width:100%;margin-bottom:0.9em" />
+
+                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Profile</label>
+                        <select id="QbtAddProfile" is="emby-select" style="width:100%;margin-bottom:0.9em">
+                            <option value="">None — set manually</option>
+                        </select>
+
+                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Category</label>
+                        <input id="QbtAddCategory" is="emby-input" type="text" style="width:100%;margin-bottom:0.9em" />
+
+                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Save path</label>
+                        <input id="QbtAddSavePath" is="emby-input" type="text" placeholder="/downloads/..." style="width:100%;margin-bottom:0.9em" />
+
+                        <label style="display:flex;align-items:center;gap:0.5em;margin-bottom:1.2em;font-size:0.88rem">
+                            <input id="QbtAddStart" type="checkbox" checked /> Start immediately
+                        </label>
+
+                        <div id="QbtAddError" style="color:#ff6b5e;font-size:0.82rem;margin-bottom:0.8em"></div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:0.8em">
+                            <button type="button" id="QbtAddCancel" is="emby-button">Cancel</button>
+                            <button type="submit" id="QbtAddSubmit" is="emby-button" class="raised">Add torrent</button>
+                        </div>
+                    </form>
+                </dialog>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var REFRESH_MS = 3000;
+                var COLOR_TEXT = '#e6ece8';
+                var COLOR_DIM = '#97a29a';
+                var COLOR_DOWN = '#4fd68c';
+                var COLOR_UP = '#e2a155';
+                var COLOR_ERROR = '#ff6b5e';
+                var COLOR_BORDER = 'rgba(255,255,255,0.12)';
+                var COLOR_SURFACE = '#1b201d';
+                var FONT_MONO = 'ui-monospace,"Cascadia Code","SF Mono","JetBrains Mono",Consolas,monospace';
+                var FONT_SANS = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+
+                var TABS = [
+                    ['', 'All'], ['Downloading', 'Downloading'], ['Seeding', 'Seeding'],
+                    ['Paused', 'Paused'], ['Completed', 'Completed'], ['Error', 'Errored']
+                ];
+
+                var state = { search: '', filterState: '', torrents: [], pollHandle: null, openHash: null, openTab: 'files' };
+
+                function stateColor(s) {
+                    switch (s) {
+                        case 'Downloading': return COLOR_DOWN;
+                        case 'Checking': return COLOR_UP;
+                        case 'Seeding': return COLOR_UP;
+                        case 'Error': return COLOR_ERROR;
+                        default: return COLOR_DIM;
+                    }
+                }
+
+                function formatBytes(n) {
+                    if (!n || n <= 0) { return '0 B'; }
+                    var units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                    var i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+                    return (n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+                }
+
+                function formatSpeed(n) { return formatBytes(n) + '/s'; }
+
+                function formatEta(seconds) {
+                    if (!seconds || seconds <= 0 || seconds >= 8640000) { return '∞'; }
+                    var d = Math.floor(seconds / 86400);
+                    var h = Math.floor((seconds % 86400) / 3600);
+                    var m = Math.floor((seconds % 3600) / 60);
+                    if (d > 0) { return d + 'd ' + h + 'h'; }
+                    if (h > 0) { return h + 'h ' + m + 'm'; }
+                    return m + 'm';
+                }
+
+                // Logarithmic 0-8 level so both a 50 KB/s trickle and a 100 MB/s
+                // LAN transfer land somewhere legible on an 8-bar meter.
+                function speedLevel(bytesPerSec) {
+                    if (!bytesPerSec || bytesPerSec <= 0) { return 0; }
+                    var level = Math.floor(Math.log2(bytesPerSec / 1024)) + 1;
+                    return Math.max(0, Math.min(8, level));
+                }
+
+                function escapeHtml(s) {
+                    var div = document.createElement('div');
+                    div.textContent = s == null ? '' : String(s);
+                    return div.innerHTML;
+                }
+
+                function ajax(path) {
+                    return ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('api/' + path), dataType: 'json' });
+                }
+
+                function apiPost(path) { return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('api/' + path) }); }
+                function apiDelete(path) { return ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl('api/' + path) }); }
+
+                // --- meters -----------------------------------------------------------
+
+                function buildMeter(id, label, color) {
+                    var bars = '';
+                    for (var i = 0; i < 8; i++) {
+                        var h = 25 + i * 10.7;
+                        bars += '<span data-bar style="width:4px;height:' + h + '%;background:' + COLOR_BORDER + ';border-radius:1px;display:inline-block;transition:background-color .4s ease"></span>';
+                    }
+                    return '' +
+                        '<div style="display:flex;flex-direction:column;gap:0.35em">' +
+                        '  <span style="font-family:' + FONT_SANS + ';font-size:0.72rem;color:' + COLOR_DIM + '">' + label + '</span>' +
+                        '  <div style="display:flex;align-items:flex-end;gap:0.75em">' +
+                        '    <span id="' + id + 'Value" style="font-family:' + FONT_MONO + ';font-variant-numeric:tabular-nums;font-size:1.2rem;font-weight:500;min-width:6.5ch;color:' + color + '">0 B/s</span>' +
+                        '    <div id="' + id + 'Bars" style="display:flex;align-items:flex-end;gap:2px;height:18px">' + bars + '</div>' +
+                        '  </div>' +
+                        '</div>';
+                }
+
+                document.querySelector('#QbtMeters').innerHTML =
+                    buildMeter('QbtDl', 'Down', COLOR_DOWN) +
+                    buildMeter('QbtUp', 'Up', COLOR_UP) +
+                    '<span id="QbtCounts" style="font-family:' + FONT_SANS + ';font-size:0.85rem;color:' + COLOR_DIM + ';align-self:flex-end;margin-left:auto"></span>';
+
+                function setBars(id, level, color) {
+                    var bars = document.querySelectorAll('#' + id + 'Bars [data-bar]');
+                    bars.forEach(function (bar, i) {
+                        bar.style.background = i < level ? color : COLOR_BORDER;
+                    });
+                }
+
+                function refreshTransfer() {
+                    ajax('qbittorrent/transfer').then(function (t) {
+                        document.querySelector('#QbtDlValue').textContent = formatSpeed(t.DownloadSpeed);
+                        document.querySelector('#QbtUpValue').textContent = formatSpeed(t.UploadSpeed);
+                        setBars('QbtDl', speedLevel(t.DownloadSpeed), COLOR_DOWN);
+                        setBars('QbtUp', speedLevel(t.UploadSpeed), COLOR_UP);
+                    }, function () {
+                        document.querySelector('#QbtDlValue').textContent = '—';
+                        document.querySelector('#QbtUpValue').textContent = '—';
+                        setBars('QbtDl', 0, COLOR_DOWN);
+                        setBars('QbtUp', 0, COLOR_UP);
+                    });
+                }
+
+                // --- filter tabs --------------------------------------------------------
+
+                function tabStyle(active) {
+                    return 'font-family:' + FONT_SANS + ';font-size:0.85rem;background:none;border:none;cursor:pointer;padding:0 0 0.35em;' +
+                        'border-bottom:2px solid ' + (active ? COLOR_DOWN : 'transparent') + ';color:' + (active ? COLOR_TEXT : COLOR_DIM) + ';';
+                }
+
+                document.querySelector('#QbtTabs').innerHTML = TABS.map(function (tab, i) {
+                    return '<button data-state="' + tab[0] + '" style="' + tabStyle(i === 0) + '">' + tab[1] + '</button>';
+                }).join('');
+
+                document.querySelector('#QbtTabs').addEventListener('click', function (e) {
+                    var button = e.target.closest('button');
+                    if (!button) { return; }
+                    state.filterState = button.getAttribute('data-state');
+                    document.querySelectorAll('#QbtTabs button').forEach(function (b) {
+                        b.setAttribute('style', tabStyle(b === button));
+                    });
+                    renderList();
+                });
+
+                // --- torrent list --------------------------------------------------------
+
+                function refreshTorrents() {
+                    // ponytail: header counts + tab filtering computed client-side from a single
+                    // pageSize=200 fetch. Add a real server-side aggregate-counts endpoint if
+                    // libraries regularly exceed 200 torrents.
+                    var query = 'pageSize=200' + (state.search ? '&search=' + encodeURIComponent(state.search) : '');
+                    ajax('qbittorrent/torrents?' + query).then(function (page) {
+                        state.torrents = page.Items || [];
+                        renderCounts();
+                        renderList();
+                    }, function () {
+                        document.querySelector('#QbtList').innerHTML =
+                            '<div style="font-family:' + FONT_SANS + ';color:' + COLOR_DIM + ';padding:3em 0;text-align:center">Unable to reach qBittorrent.</div>';
+                    });
+                }
+
+                function renderCounts() {
+                    var downloading = state.torrents.filter(function (t) { return t.State === 'Downloading'; }).length;
+                    var seeding = state.torrents.filter(function (t) { return t.State === 'Seeding'; }).length;
+                    document.querySelector('#QbtCounts').textContent = downloading + ' downloading, ' + seeding + ' seeding';
+                }
+
+                function visibleTorrents() {
+                    if (!state.filterState) { return state.torrents; }
+                    return state.torrents.filter(function (t) { return t.State === state.filterState; });
+                }
+
+                function renderList() {
+                    var list = document.querySelector('#QbtList');
+                    var visible = visibleTorrents();
+
+                    if (visible.length === 0) {
+                        list.innerHTML = '<div style="font-family:' + FONT_SANS + ';color:' + COLOR_DIM + ';padding:3em 0;text-align:center">No torrents here.</div>';
+                        return;
+                    }
+
+                    list.innerHTML = visible.map(renderRow).join('');
+
+                    visible.forEach(function (t) {
+                        var head = list.querySelector('[data-hash="' + t.Hash + '"] [data-row-head]');
+                        if (head) {
+                            head.addEventListener('click', function () { toggleDetail(t.Hash); });
+                        }
+                    });
+
+                    if (state.openHash && visible.some(function (t) { return t.Hash === state.openHash; })) {
+                        renderDetail(state.openHash);
+                    }
+                }
+
+                function renderRow(t) {
+                    var progressPct = Math.round((t.Progress || 0) * 100);
+                    var isOpen = state.openHash === t.Hash;
+                    var color = stateColor(t.State);
+                    var isLast = state.torrents.indexOf(t) === state.torrents.length - 1;
+
+                    return '' +
+                        '<div data-hash="' + escapeHtml(t.Hash) + '" style="border-top:1px solid ' + COLOR_BORDER + ';' + (isLast ? 'border-bottom:1px solid ' + COLOR_BORDER + ';' : '') + 'padding:0.9em 0">' +
+                        '  <div data-row-head style="display:flex;justify-content:space-between;align-items:baseline;gap:1em;cursor:pointer;font-family:' + FONT_SANS + '">' +
+                        '    <span style="font-size:0.95rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(t.Name) + '</span>' +
+                        '    <span style="font-family:' + FONT_MONO + ';font-size:0.72rem;font-weight:600;letter-spacing:0.02em;white-space:nowrap;flex-shrink:0;color:' + color + '">' + escapeHtml(t.State) + '</span>' +
+                        '  </div>' +
+                        '  <div style="position:relative;height:7px;background:' + COLOR_SURFACE + ';border-radius:3px;margin:0.65em 0 0.55em;overflow:hidden">' +
+                        '    <div style="position:absolute;inset:0;width:' + progressPct + '%;background:' + color + '"></div>' +
+                        '  </div>' +
+                        '  <div style="display:flex;flex-wrap:wrap;gap:0 1.1em;font-family:' + FONT_SANS + ';font-size:0.82rem;color:' + COLOR_DIM + '">' +
+                        '    <span style="font-family:' + FONT_MONO + '">' + progressPct + '%</span>' +
+                        '    <span style="font-family:' + FONT_MONO + '">&#8595; ' + formatSpeed(t.DownloadSpeed) + '</span>' +
+                        '    <span style="font-family:' + FONT_MONO + '">&#8593; ' + formatSpeed(t.UploadSpeed) + '</span>' +
+                        '    <span style="font-family:' + FONT_MONO + '">eta ' + formatEta(t.Eta) + '</span>' +
+                        '    <span style="font-family:' + FONT_MONO + '">seeds ' + t.Seeds + '</span>' +
+                        '    <span style="font-family:' + FONT_MONO + '">peers ' + t.Peers + '</span>' +
+                        '    <span style="margin-left:auto">' + escapeHtml(t.Category || 'uncategorized') + '</span>' +
+                        '  </div>' +
+                        (isOpen ? '<div id="QbtDetail" style="margin-top:1em"></div>' : '') +
+                        '</div>';
+                }
+
+                function toggleDetail(hash) {
+                    state.openHash = state.openHash === hash ? null : hash;
+                    state.openTab = 'files';
+                    renderList();
+                }
+
+                // --- actions -----------------------------------------------------------
+
+                function runAction(hash, action) {
+                    var request;
+
+                    if (action === 'delete' || action === 'delete-files') {
+                        var deleteFiles = action === 'delete-files';
+                        var torrent = state.torrents.find(function (t) { return t.Hash === hash; });
+                        var name = torrent ? torrent.Name : hash;
+                        var message = deleteFiles
+                            ? 'Delete torrent and downloaded files?\n\n' + name + '\n\nThis will permanently delete the torrent and its downloaded data.'
+                            : 'Delete torrent "' + name + '"? Downloaded files are kept.';
+
+                        if (!window.confirm(message)) { return; }
+
+                        request = apiDelete('qbittorrent/torrents/' + hash + '?deleteFiles=' + deleteFiles);
+                    } else {
+                        request = apiPost('qbittorrent/torrents/' + hash + '/' + action);
+                    }
+
+                    request.then(function () {
+                        if (action === 'delete' || action === 'delete-files') { state.openHash = null; }
+                        refreshTorrents();
+                    }, function () {
+                        window.alert('Action failed. See server logs for details.');
+                    });
+                }
+
+                function renderDetail(hash) {
+                    var container = document.querySelector('#QbtDetail');
+                    if (!container) { return; }
+
+                    var tabs = ['files', 'peers', 'trackers'];
+                    var actions = [
+                        ['resume', 'Resume', false], ['pause', 'Pause', false], ['force-resume', 'Force resume', false],
+                        ['recheck', 'Recheck', false], ['reannounce', 'Reannounce', false],
+                        ['delete', 'Delete', true], ['delete-files', 'Delete + files', true]
+                    ];
+
+                    function detailTabStyle(active) {
+                        return 'font-family:' + FONT_SANS + ';font-size:0.78rem;background:none;border:none;cursor:pointer;padding:0 0 0.25em;text-transform:capitalize;' +
+                            'border-bottom:2px solid ' + (active ? COLOR_DOWN : 'transparent') + ';color:' + (active ? COLOR_TEXT : COLOR_DIM) + ';';
+                    }
+
+                    container.innerHTML =
+                        '<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.2em;margin-bottom:1em;font-family:' + FONT_SANS + '">' +
+                        actions.map(function (a) {
+                            return '<button data-action="' + a[0] + '" style="background:none;border:none;cursor:pointer;font-size:0.82rem;padding:0.2em 0;color:' + (a[2] ? COLOR_ERROR : COLOR_DIM) + '">' + a[1] + '</button>';
+                        }).join('') +
+                        '</div>' +
+                        '<div style="display:flex;gap:1.2em;margin-bottom:0.8em">' +
+                        tabs.map(function (tab) {
+                            return '<button data-tab="' + tab + '" style="' + detailTabStyle(state.openTab === tab) + '">' + tab + '</button>';
+                        }).join('') +
+                        '</div><div id="QbtDetailBody" style="font-family:' + FONT_MONO + ';font-size:0.8rem;color:' + COLOR_DIM + '">Loading…</div>';
+
+                    tabs.forEach(function (tab) {
+                        container.querySelector('[data-tab="' + tab + '"]').addEventListener('click', function () {
+                            state.openTab = tab;
+                            renderDetail(hash);
+                        });
+                    });
+
+                    container.querySelectorAll('[data-action]').forEach(function (button) {
+                        button.addEventListener('click', function () { runAction(hash, button.getAttribute('data-action')); });
+                    });
+
+                    ajax('qbittorrent/torrents/' + hash + '/' + state.openTab).then(function (items) {
+                        var body = container.querySelector('#QbtDetailBody');
+                        if (!body) { return; }
+                        body.innerHTML = renderDetailTable(state.openTab, items);
+                    }, function () {
+                        var body = container.querySelector('#QbtDetailBody');
+                        if (body) { body.textContent = 'Unable to load.'; }
+                    });
+                }
+
+                function cell(text) {
+                    return '<td style="padding:0.3em 1em 0.3em 0;border-top:1px solid ' + COLOR_BORDER + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw">' + text + '</td>';
+                }
+
+                function renderDetailTable(tab, items) {
+                    if (!items || items.length === 0) {
+                        return '<div style="font-family:' + FONT_SANS + ';padding:1em 0">Nothing to show.</div>';
+                    }
+
+                    var rows;
+                    if (tab === 'files') {
+                        rows = items.map(function (f) {
+                            return '<tr>' + cell(escapeHtml(f.Name)) + cell(formatBytes(f.Size)) + cell(Math.round((f.Progress || 0) * 100) + '%') + '</tr>';
+                        });
+                    } else if (tab === 'peers') {
+                        rows = items.map(function (p) {
+                            return '<tr>' + cell(escapeHtml(p.Ip) + ':' + p.Port) + cell(escapeHtml(p.Client)) +
+                                cell('&#8595; ' + formatSpeed(p.DownloadSpeed)) + cell('&#8593; ' + formatSpeed(p.UploadSpeed)) + '</tr>';
+                        });
+                    } else {
+                        rows = items.map(function (t) {
+                            return '<tr>' + cell(escapeHtml(t.Url)) + cell(escapeHtml(t.Status)) + cell(String(t.NumPeers)) + '</tr>';
+                        });
+                    }
+
+                    return '<table style="width:100%;border-collapse:collapse">' + rows.join('') + '</table>';
+                }
+
+                // --- polling & search ----------------------------------------------------
+
+                function refreshAll() { refreshTransfer(); refreshTorrents(); }
+
+                function startPolling() {
+                    stopPolling();
+                    refreshAll();
+                    state.pollHandle = setInterval(refreshAll, REFRESH_MS);
+                }
+
+                function stopPolling() {
+                    if (state.pollHandle) {
+                        clearInterval(state.pollHandle);
+                        state.pollHandle = null;
+                    }
+                }
+
+                document.querySelector('#QBittorrentPage').addEventListener('pageshow', startPolling);
+                document.querySelector('#QBittorrentPage').addEventListener('pagehide', stopPolling);
+
+                document.addEventListener('visibilitychange', function () {
+                    if (document.hidden) {
+                        stopPolling();
+                    } else if (document.querySelector('#QBittorrentPage').classList.contains('page')) {
+                        startPolling();
+                    }
+                });
+
+                var searchTimer = null;
+                document.querySelector('#QbtSearch').addEventListener('input', function (e) {
+                    clearTimeout(searchTimer);
+                    var value = e.target.value;
+                    searchTimer = setTimeout(function () {
+                        state.search = value;
+                        refreshTorrents();
+                    }, 300);
+                });
+
+                // --- add torrent ---------------------------------------------------------
+
+                var addDialog = document.querySelector('#QbtAddDialog');
+                var addForm = document.querySelector('#QbtAddForm');
+                var addProfileSelect = document.querySelector('#QbtAddProfile');
+                var profiles = [];
+
+                document.querySelector('#QbtAddButton').addEventListener('click', function () {
+                    addForm.reset();
+                    document.querySelector('#QbtAddError').textContent = '';
+                    ajax('qbittorrent/profiles').then(function (list) {
+                        profiles = list || [];
+                        addProfileSelect.innerHTML = '<option value="">None — set manually</option>' +
+                            profiles.map(function (p, i) { return '<option value="' + i + '">' + escapeHtml(p.Name) + '</option>'; }).join('');
+                    });
+                    addDialog.showModal();
+                });
+
+                document.querySelector('#QbtAddCancel').addEventListener('click', function () { addDialog.close(); });
+
+                addProfileSelect.addEventListener('change', function () {
+                    var profile = profiles[parseInt(addProfileSelect.value, 10)];
+                    if (profile) {
+                        document.querySelector('#QbtAddCategory').value = profile.Category || '';
+                        document.querySelector('#QbtAddSavePath').value = profile.SavePath || '';
+                    }
+                });
+
+                addForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    var magnet = document.querySelector('#QbtAddMagnet').value.trim();
+                    var fileInput = document.querySelector('#QbtAddFile');
+                    var file = fileInput.files && fileInput.files[0];
+                    var errorEl = document.querySelector('#QbtAddError');
+
+                    if (!magnet && !file) {
+                        errorEl.textContent = 'Enter a magnet link/URL or choose a .torrent file.';
+                        return;
+                    }
+
+                    var formData = new FormData();
+                    if (file) { formData.append('torrentFile', file); }
+                    if (magnet) { formData.append('magnetUri', magnet); }
+                    formData.append('category', document.querySelector('#QbtAddCategory').value);
+                    formData.append('savePath', document.querySelector('#QbtAddSavePath').value);
+                    formData.append('startImmediately', document.querySelector('#QbtAddStart').checked);
+
+                    errorEl.textContent = '';
+                    ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('api/qbittorrent/torrents'), data: formData }).then(function () {
+                        addDialog.close();
+                        refreshTorrents();
+                    }, function () {
+                        errorEl.textContent = 'Could not add torrent. Check the magnet link/file and try again.';
+                    });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

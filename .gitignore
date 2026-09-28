@@ -1,0 +1,13 @@
+## .NET
+bin/
+obj/
+*.user
+artifacts/
+
+## IDE
+.vs/
+.idea/
+*.swp
+
+## OS
+.DS_Store

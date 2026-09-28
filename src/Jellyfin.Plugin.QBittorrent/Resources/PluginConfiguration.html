@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>qBittorrent Manager</title>
+</head>
+<body>
+    <div id="QBittorrentConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="QBittorrentConfigForm">
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="QBittorrentUrl">qBittorrent URL</label>
+                        <input id="QBittorrentUrl" name="QBittorrentUrl" type="text" is="emby-input" placeholder="http://qbittorrent:8080" />
+                        <div class="fieldDescription">Address of the qBittorrent Web UI, reachable from the Jellyfin server. Administrator-only setting.</div>
+                    </div>
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="AuthenticationMode">Authentication mode</label>
+                        <select is="emby-select" id="AuthenticationMode" name="AuthenticationMode" class="emby-select-withcolor emby-select">
+                            <option value="ApiKey">API key (qBittorrent 5.2+)</option>
+                            <option value="UsernamePassword">Username / password (compatibility fallback)</option>
+                        </select>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="ApiKey">API key</label>
+                        <input id="ApiKey" name="ApiKey" type="password" is="emby-input" autocomplete="off" />
+                        <div class="fieldDescription">Generated in qBittorrent under Preferences &gt; WebUI &gt; API Key. Never shown after saving.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="Username">Username</label>
+                        <input id="Username" name="Username" type="text" is="emby-input" autocomplete="off" />
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="Password">Password</label>
+                        <input id="Password" name="Password" type="password" is="emby-input" autocomplete="off" />
+                        <div class="fieldDescription">Never shown after saving.</div>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="EnableDashboardWidget" name="EnableDashboardWidget" type="checkbox" is="emby-checkbox" />
+                            <span>Show dashboard widget</span>
+                        </label>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="RefreshIntervalSeconds">Refresh interval (seconds)</label>
+                        <input id="RefreshIntervalSeconds" name="RefreshIntervalSeconds" type="number" is="emby-input" min="1" />
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="EnableCompletionMonitoring" name="EnableCompletionMonitoring" type="checkbox" is="emby-checkbox" />
+                            <span>Monitor torrents for completion</span>
+                        </label>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="ScanLibraryOnCompletion" name="ScanLibraryOnCompletion" type="checkbox" is="emby-checkbox" />
+                            <span>Scan Jellyfin library when a torrent completes</span>
+                        </label>
+                    </div>
+                    <h2 style="margin-top:1.5em">Download profiles</h2>
+                    <div class="fieldDescription">Named category + save path presets offered when adding a torrent, so paths aren't retyped each time.</div>
+                    <div id="ProfilesList" style="margin:0.75em 0"></div>
+                    <div>
+                        <button is="emby-button" type="button" id="AddProfileButton" class="raised">
+                            <span>+ Add profile</span>
+                        </button>
+                    </div>
+
+                    <div>
+                        <button is="emby-button" type="button" id="TestConnectionButton" class="raised block emby-button">
+                            <span>Test Connection</span>
+                        </button>
+                        <div class="fieldDescription">Tests against the saved configuration below — save first if you just changed it.</div>
+                    </div>
+                    <div id="TestConnectionResult" class="fieldDescription"></div>
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            var QBittorrentConfig = {
+                pluginUniqueId: 'f6a0e4c2-3b3e-4b9a-9f4e-8a4a1d2c9b7d'
+            };
+            var profiles = [];
+
+            function renderProfiles() {
+                var list = document.querySelector('#ProfilesList');
+                list.innerHTML = profiles.map(function (p, i) {
+                    return '<div style="display:flex;flex-wrap:wrap;gap:0.5em;align-items:center;margin-bottom:0.5em">' +
+                        '<input is="emby-input" data-field="Name" data-index="' + i + '" placeholder="Name" value="' + escapeAttr(p.Name) + '" style="flex:1 1 120px" />' +
+                        '<input is="emby-input" data-field="Category" data-index="' + i + '" placeholder="Category" value="' + escapeAttr(p.Category) + '" style="flex:1 1 140px" />' +
+                        '<input is="emby-input" data-field="SavePath" data-index="' + i + '" placeholder="/downloads/..." value="' + escapeAttr(p.SavePath) + '" style="flex:2 1 220px" />' +
+                        '<button is="emby-button" type="button" data-remove="' + i + '">&times;</button>' +
+                        '</div>';
+                }).join('');
+
+                list.querySelectorAll('[data-field]').forEach(function (input) {
+                    input.addEventListener('input', function () {
+                        profiles[parseInt(input.getAttribute('data-index'), 10)][input.getAttribute('data-field')] = input.value;
+                    });
+                });
+
+                list.querySelectorAll('[data-remove]').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        profiles.splice(parseInt(button.getAttribute('data-remove'), 10), 1);
+                        renderProfiles();
+                    });
+                });
+            }
+
+            function escapeAttr(s) {
+                var div = document.createElement('div');
+                div.textContent = s == null ? '' : String(s);
+                return div.innerHTML.replace(/"/g, '&quot;');
+            }
+
+            document.querySelector('#AddProfileButton').addEventListener('click', function () {
+                profiles.push({ Name: '', Category: '', SavePath: '' });
+                renderProfiles();
+            });
+
+            document.querySelector('#QBittorrentConfigPage')
+                .addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(QBittorrentConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#QBittorrentUrl').value = config.QBittorrentUrl;
+                        document.querySelector('#AuthenticationMode').value = config.AuthenticationMode;
+                        document.querySelector('#Username').value = config.Username;
+                        document.querySelector('#EnableDashboardWidget').checked = config.EnableDashboardWidget;
+                        document.querySelector('#RefreshIntervalSeconds').value = config.RefreshIntervalSeconds;
+                        document.querySelector('#EnableCompletionMonitoring').checked = config.EnableCompletionMonitoring;
+                        document.querySelector('#ScanLibraryOnCompletion').checked = config.ScanLibraryOnCompletion;
+                        profiles = config.Profiles || [];
+                        renderProfiles();
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+            document.querySelector('#QBittorrentConfigForm')
+                .addEventListener('submit', function (e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(QBittorrentConfig.pluginUniqueId).then(function (config) {
+                        config.QBittorrentUrl = document.querySelector('#QBittorrentUrl').value;
+                        config.AuthenticationMode = document.querySelector('#AuthenticationMode').value;
+                        config.Username = document.querySelector('#Username').value;
+                        config.EnableDashboardWidget = document.querySelector('#EnableDashboardWidget').checked;
+                        config.RefreshIntervalSeconds = parseInt(document.querySelector('#RefreshIntervalSeconds').value, 10);
+                        config.EnableCompletionMonitoring = document.querySelector('#EnableCompletionMonitoring').checked;
+                        config.ScanLibraryOnCompletion = document.querySelector('#ScanLibraryOnCompletion').checked;
+                        config.Profiles = profiles.filter(function (p) { return p.Name; });
+
+                        // Only send the API key / password if the admin typed a new one;
+                        // the server never echoes secrets back into these fields.
+                        var apiKey = document.querySelector('#ApiKey').value;
+                        if (apiKey) {
+                            config.ApiKey = apiKey;
+                        }
+
+                        var password = document.querySelector('#Password').value;
+                        if (password) {
+                            config.Password = password;
+                        }
+
+                        ApiClient.updatePluginConfiguration(QBittorrentConfig.pluginUniqueId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+
+                    e.preventDefault();
+                    return false;
+                });
+
+            document.querySelector('#TestConnectionButton')
+                .addEventListener('click', function () {
+                    var resultEl = document.querySelector('#TestConnectionResult');
+                    resultEl.textContent = 'Testing...';
+                    ApiClient.ajax({
+                        type: 'POST',
+                        url: ApiClient.getUrl('api/qbittorrent/test-connection'),
+                        dataType: 'json'
+                    }).then(function (status) {
+                        resultEl.style.color = status.Connected ? '#4fd68c' : '#ff6b5e';
+                        resultEl.textContent = status.Connected
+                            ? '✓ Connected — qBittorrent ' + status.QBittorrentVersion + ' (' + status.AuthenticationMode + ')'
+                            : '✗ Connection failed — ' + status.ErrorMessage;
+                    }, function () {
+                        resultEl.style.color = '#ff6b5e';
+                        resultEl.textContent = '✗ Connection failed — request error';
+                    });
+                });
+        </script>
+    </div>
+</body>
+</html>

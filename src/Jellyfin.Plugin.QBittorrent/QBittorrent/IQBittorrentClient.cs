@@ -93,6 +93,11 @@ public interface IQBittorrentClient
     Task DeleteSearchAsync(int searchId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Gets the search plugins installed in qBittorrent.
+    /// </summary>
+    Task<IReadOnlyList<SearchPlugin>> GetSearchPluginsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gets all configured categories.
     /// </summary>
     Task<IReadOnlyList<Category>> GetCategoriesAsync(CancellationToken cancellationToken);

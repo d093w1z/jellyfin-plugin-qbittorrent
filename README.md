@@ -22,6 +22,15 @@ All endpoints require an authenticated Jellyfin administrator. Add-torrent
 and management actions (pause/resume/delete/etc.) land in subsequent phases
 — see the spec's version roadmap.
 
+## Torrent search
+
+The **Search** tab searches torrent sites through qBittorrent's own search
+engine, using whichever search plugins are installed and enabled in
+qBittorrent (View → Search Engine → Search plugins; qBittorrent needs Python
+for these). The plugin doesn't ship or manage search plugins itself. **Add**
+on a result opens the usual add dialog with its link filled in, so profiles,
+category and save path work the same way as for any other torrent.
+
 ## Build
 
 Requires the .NET 10 SDK on Linux.

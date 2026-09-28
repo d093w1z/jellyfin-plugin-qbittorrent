@@ -192,4 +192,19 @@ internal sealed class WireSearchResult
 
     [JsonPropertyName("siteUrl")]
     public string SiteUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("descrLink")]
+    public string DescrLink { get; set; } = string.Empty;
+}
+
+internal sealed class WireSearchPlugin
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("fullName")]
+    public string FullName { get; set; } = string.Empty;
+
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
 }

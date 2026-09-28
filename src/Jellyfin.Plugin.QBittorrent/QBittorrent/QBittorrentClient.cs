@@ -211,7 +211,8 @@ public sealed class QBittorrentClient : IQBittorrentClient
                 DownloadLink = r.FileUrl,
                 Seeders = r.NbSeeders,
                 Leechers = r.NbLeechers,
-                SiteUrl = r.SiteUrl
+                SiteUrl = r.SiteUrl,
+                DescriptionUrl = r.DescrLink
             }).ToList()
         };
     }
@@ -221,6 +222,13 @@ public sealed class QBittorrentClient : IQBittorrentClient
     {
         var form = new Dictionary<string, string> { ["id"] = searchId.ToString(CultureInfo.InvariantCulture) };
         return _connection.PostFormAsync("/api/v2/search/delete", form, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SearchPlugin>> GetSearchPluginsAsync(CancellationToken cancellationToken)
+    {
+        var wire = await _connection.GetJsonAsync<List<WireSearchPlugin>>("/api/v2/search/plugins", query: null, cancellationToken).ConfigureAwait(false);
+        return wire.Select(p => new SearchPlugin { Name = p.Name, FullName = p.FullName, Enabled = p.Enabled }).ToList();
     }
 
     /// <inheritdoc />

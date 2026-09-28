@@ -219,4 +219,19 @@ public class ControllerTests
         Assert.False(status!.Connected);
         Assert.Equal("qBittorrent unavailable", status.ErrorMessage);
     }
+
+    [Fact]
+    public async Task StartSearch_RejectsBlankPattern_AndReturnsJobId()
+    {
+        var mock = new Mock<IQBittorrentClient>();
+        mock.Setup(c => c.StartSearchAsync("ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync(42);
+        var controller = CreateController<SearchController>(mock.Object);
+
+        var blank = await controller.Start(new SearchController.SearchStartBody { Pattern = "  " }, CancellationToken.None);
+        var started = await controller.Start(new SearchController.SearchStartBody { Pattern = " ubuntu " }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(blank.Result);
+        var job = Assert.IsType<OkObjectResult>(started.Result).Value as SearchController.SearchJob;
+        Assert.Equal(42, job!.Id);
+    }
 }

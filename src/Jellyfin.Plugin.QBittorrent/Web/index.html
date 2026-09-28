@@ -129,6 +129,21 @@
             #QBittorrentPage .qbt-error { min-height: 1.2em; margin: 0.9rem 0 0; font-size: 13px; color: var(--qbt-red); }
             #QBittorrentPage .qbt-dialog-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
 
+            /* views + web search */
+            #QBittorrentPage .qbt-views { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--qbt-border); margin-bottom: 1.25rem; }
+            #QBittorrentPage .qbt-views .qbt-tab { font-size: 14px; }
+            #QBittorrentPage .qbt-websearch { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+            #QBittorrentPage .qbt-websearch .qbt-search { flex: 1 1 auto; max-width: none; }
+            #QBittorrentPage .qbt-search-status { min-height: 1.4em; margin-bottom: 0.75rem; font-size: 13px; }
+            #QBittorrentPage .qbt-result-grid { display: grid; grid-template-columns: minmax(0, 1fr) 90px 64px 64px auto; gap: 1.25rem; align-items: center; padding: 0 1rem; }
+            #QBittorrentPage .qbt-result { min-height: 3.5rem; padding-top: 0.55rem; padding-bottom: 0.55rem; }
+            #QBittorrentPage .qbt-result + .qbt-result { border-top: 1px solid var(--qbt-border); }
+            #QBittorrentPage .qbt-result:hover { background: var(--qbt-subtle); }
+            #QBittorrentPage .qbt-result .r, #QBittorrentPage .qbt-result-grid .r { text-align: right; font-size: 12px; }
+            #QBittorrentPage .qbt-result a { color: inherit; }
+            #QBittorrentPage .qbt-seeds { color: var(--qbt-green); }
+            #QBittorrentPage .show-sm { display: none; }
+
             /* toast */
             #QBittorrentPage .qbt-toast {
                 position: fixed; left: 50%; bottom: 1.5rem; transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
@@ -151,6 +166,9 @@
                 #QBittorrentPage .qbt-row-head > :nth-child(5) { grid-column: 3; grid-row: 1; }
                 #QBittorrentPage .qbt-search { flex: 1 1 100%; }
                 #QBittorrentPage .qbt-table .hide-sm { display: none; }
+                #QBittorrentPage .qbt-result-grid { grid-template-columns: minmax(0, 1fr) auto; gap: 0.75rem; }
+                #QBittorrentPage .qbt-result-grid > .hide-sm { display: none; }
+                #QBittorrentPage .show-sm { display: inline; }
             }
         </style>
 
@@ -175,6 +193,12 @@
                     <div class="qbt-stat"><div class="qbt-stat-label">Seeding</div><div id="QbtSeedingCount" class="qbt-stat-value num">—</div></div>
                 </section>
 
+                <nav class="qbt-views" role="tablist" aria-label="View">
+                    <button type="button" class="qbt-tab" role="tab" data-view="torrents" aria-selected="true">Torrents</button>
+                    <button type="button" class="qbt-tab" role="tab" data-view="search" aria-selected="false">Search</button>
+                </nav>
+
+                <div id="QbtTorrentsView">
                 <div class="qbt-toolbar">
                     <div id="QbtTabs" class="qbt-segments" role="group" aria-label="Filter by state"></div>
                     <label class="qbt-search">
@@ -186,6 +210,22 @@
                 <div class="qbt-list">
                     <div class="qbt-list-head" aria-hidden="true"><span>Name</span><span>Progress</span><span>Speed</span><span style="text-align:right">ETA</span><span></span></div>
                     <div id="QbtList"><div class="qbt-empty">Loading…</div></div>
+                </div>
+                </div>
+
+                <div id="QbtSearchView" hidden>
+                    <form id="QbtWebSearchForm" class="qbt-websearch">
+                        <label class="qbt-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                            <input id="QbtWebSearchInput" class="qbt-input" type="search" placeholder="Search torrent sites" aria-label="Search torrent sites" maxlength="200" required />
+                        </label>
+                        <button type="submit" class="qbt-btn qbt-btn-primary">Search</button>
+                    </form>
+                    <div id="QbtWebSearchStatus" class="qbt-search-status muted" aria-live="polite"></div>
+                    <div class="qbt-list">
+                        <div class="qbt-list-head qbt-result-grid" aria-hidden="true"><span>Name</span><span class="r hide-sm">Size</span><span class="r hide-sm">Seeds</span><span class="r hide-sm">Leechers</span><span></span></div>
+                        <div id="QbtWebResults"><div class="qbt-empty">Results come from the search plugins installed in qBittorrent.</div></div>
+                    </div>
                 </div>
 
                 <div id="QbtToast" class="qbt-toast" role="status" aria-live="polite"></div>
@@ -590,6 +630,144 @@
                     }, 300);
                 });
 
+                // --- views ------------------------------------------------------------------
+
+                page.querySelector('.qbt-views').addEventListener('click', function (e) {
+                    var button = e.target.closest('[data-view]');
+                    if (!button) { return; }
+                    var view = button.getAttribute('data-view');
+                    page.querySelectorAll('.qbt-views [data-view]').forEach(function (b) {
+                        b.setAttribute('aria-selected', String(b === button));
+                    });
+                    page.querySelector('#QbtTorrentsView').hidden = view !== 'torrents';
+                    page.querySelector('#QbtSearchView').hidden = view !== 'search';
+                    if (view === 'search') {
+                        checkSearchPlugins();
+                        page.querySelector('#QbtWebSearchInput').focus();
+                    }
+                });
+
+                // --- web search (qBittorrent's search engine + its installed plugins) ----------
+
+                var SEARCH_POLL_MS = 1500;
+                // ponytail: renders the top results by seeders only; add paging if people scroll past this.
+                var SEARCH_MAX_ROWS = 200;
+                var webSearch = { id: null, timer: null, results: [], visible: [], running: false };
+                var webStatus = page.querySelector('#QbtWebSearchStatus');
+                var webResults = page.querySelector('#QbtWebResults');
+
+                function checkSearchPlugins() {
+                    ajax('qbittorrent/search/plugins').then(function (plugins) {
+                        var enabled = (plugins || []).filter(function (p) { return p.Enabled; }).length;
+                        if (enabled === 0 && webSearch.id === null) {
+                            webResults.innerHTML = '<div class="qbt-empty"><strong>No search plugins enabled</strong>' +
+                                'Install and enable them in qBittorrent under View → Search Engine → Search plugins.</div>';
+                        }
+                        if (webSearch.id === null) {
+                            webStatus.textContent = enabled ? enabled + ' search plugin' + (enabled === 1 ? '' : 's') + ' enabled' : '';
+                        }
+                    }, function () {
+                        webStatus.textContent = 'Unable to reach qBittorrent.';
+                    });
+                }
+
+                function stopWebSearch() {
+                    clearTimeout(webSearch.timer);
+                    if (webSearch.id !== null) {
+                        apiDelete('qbittorrent/search/' + webSearch.id);
+                        webSearch.id = null;
+                    }
+                }
+
+                function hostOf(url) {
+                    try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return url || ''; }
+                }
+
+                function renderWebResults() {
+                    var sorted = webSearch.results.slice().sort(function (a, b) { return b.Seeders - a.Seeders; });
+                    var count = sorted.length;
+                    webStatus.textContent = (webSearch.running ? 'Searching… ' : '') + count + ' result' + (count === 1 ? '' : 's') +
+                        (count > SEARCH_MAX_ROWS ? ' (showing top ' + SEARCH_MAX_ROWS + ' by seeders)' : '');
+
+                    if (count === 0) {
+                        webResults.innerHTML = webSearch.running
+                            ? '<div class="qbt-empty">Searching…</div>'
+                            : '<div class="qbt-empty"><strong>No results</strong>Try different keywords.</div>';
+                        return;
+                    }
+
+                    webResults.innerHTML = sorted.slice(0, SEARCH_MAX_ROWS).map(function (r, i) {
+                        var size = r.Size > 0 ? formatBytes(r.Size) : '—';
+                        var source = escapeHtml(hostOf(r.SiteUrl));
+                        return '' +
+                            '<div class="qbt-result qbt-result-grid">' +
+                            '  <div style="min-width:0">' +
+                            '    <div class="qbt-name" title="' + escapeHtml(r.Name) + '">' + escapeHtml(r.Name) + '</div>' +
+                            '    <div class="qbt-meta">' +
+                            (/^https?:\/\//.test(r.DescriptionUrl) ? '<a href="' + escapeHtml(r.DescriptionUrl) + '" target="_blank" rel="noopener noreferrer">' + source + ' ↗</a>' : '<span>' + source + '</span>') +
+                            '      <span class="show-sm num">· ' + size + ' · <span class="qbt-seeds">' + r.Seeders + ' seeds</span></span>' +
+                            '    </div>' +
+                            '  </div>' +
+                            '  <span class="r num hide-sm">' + size + '</span>' +
+                            '  <span class="r num hide-sm qbt-seeds">' + r.Seeders + '</span>' +
+                            '  <span class="r num hide-sm muted">' + r.Leechers + '</span>' +
+                            '  <button type="button" class="qbt-btn qbt-btn-sm" data-result="' + i + '">Add</button>' +
+                            '</div>';
+                    }).join('');
+                    webSearch.visible = sorted;
+                }
+
+                function pollWebSearch(id) {
+                    ajax('qbittorrent/search/' + id).then(function (result) {
+                        if (webSearch.id !== id) { return; }
+                        webSearch.results = result.Results || [];
+                        webSearch.running = result.Status === 'Running';
+                        renderWebResults();
+                        if (webSearch.running) {
+                            webSearch.timer = setTimeout(function () { pollWebSearch(id); }, SEARCH_POLL_MS);
+                        }
+                    }, function () {
+                        if (webSearch.id !== id) { return; }
+                        webSearch.running = false;
+                        webStatus.textContent = 'Search failed. See server logs for details.';
+                    });
+                }
+
+                page.querySelector('#QbtWebSearchForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var pattern = page.querySelector('#QbtWebSearchInput').value.trim();
+                    if (!pattern) { return; }
+
+                    stopWebSearch();
+                    webSearch.results = [];
+                    webSearch.running = true;
+                    renderWebResults();
+
+                    ApiClient.ajax({
+                        type: 'POST',
+                        url: ApiClient.getUrl('api/qbittorrent/search'),
+                        data: JSON.stringify({ Pattern: pattern }),
+                        contentType: 'application/json',
+                        dataType: 'json'
+                    }).then(function (job) {
+                        webSearch.id = job.Id;
+                        pollWebSearch(job.Id);
+                    }, function () {
+                        webSearch.running = false;
+                        webResults.innerHTML = '<div class="qbt-empty"><strong>Search failed</strong>Check that qBittorrent has search plugins installed and enabled.</div>';
+                        webStatus.textContent = '';
+                    });
+                });
+
+                webResults.addEventListener('click', function (e) {
+                    var button = e.target.closest('[data-result]');
+                    if (!button) { return; }
+                    var result = webSearch.visible[parseInt(button.getAttribute('data-result'), 10)];
+                    if (result) { openAddDialog(result.DownloadLink); }
+                });
+
+                page.addEventListener('pagehide', stopWebSearch);
+
                 // --- add torrent ---------------------------------------------------------
 
                 var addDialog = page.querySelector('#QbtAddDialog');
@@ -599,7 +777,9 @@
                 var addFileName = page.querySelector('#QbtAddFileName');
                 var profiles = [];
 
-                page.querySelector('#QbtAddButton').addEventListener('click', function () {
+                page.querySelector('#QbtAddButton').addEventListener('click', function () { openAddDialog(''); });
+
+                function openAddDialog(link) {
                     addForm.reset();
                     addFileName.textContent = 'No file selected';
                     page.querySelector('#QbtAddError').textContent = '';
@@ -608,9 +788,10 @@
                         addProfileSelect.innerHTML = '<option value="">None — set manually</option>' +
                             profiles.map(function (p, i) { return '<option value="' + i + '">' + escapeHtml(p.Name) + '</option>'; }).join('');
                     });
+                    page.querySelector('#QbtAddMagnet').value = link;
                     addDialog.showModal();
-                    page.querySelector('#QbtAddMagnet').focus();
-                });
+                    page.querySelector(link ? '#QbtAddProfile' : '#QbtAddMagnet').focus();
+                }
 
                 page.querySelector('#QbtAddCancel').addEventListener('click', function () { addDialog.close(); });
 

@@ -128,4 +128,29 @@ public class QBittorrentClientTests
         Assert.Equal(100, transfer.DownloadSpeed);
         Assert.Equal("connected", transfer.ConnectionStatus);
     }
+
+    [Fact]
+    public async Task SearchAsync_MapsResultsAndPlugins()
+    {
+        var (client, handler) = CreateClient();
+        handler.OnJson("GET", "/api/v2/search/results", """
+            { "status": "Running", "total": 1, "results": [
+              { "fileName": "Ubuntu 24.04", "fileSize": 6000, "fileUrl": "magnet:?xt=urn:btih:abc", "nbSeeders": 50,
+                "nbLeechers": 2, "siteUrl": "https://example.org", "descrLink": "https://example.org/t/1" } ] }
+            """);
+        handler.OnJson("GET", "/api/v2/search/plugins", """
+            [ { "name": "example", "fullName": "Example", "enabled": true, "version": "1.0", "url": "https://example.org", "supportedCategories": [] } ]
+            """);
+
+        var page = await client.GetSearchResultsAsync(7, CancellationToken.None);
+        var plugin = Assert.Single(await client.GetSearchPluginsAsync(CancellationToken.None));
+
+        var result = Assert.Single(page.Results);
+        Assert.Equal("Running", page.Status);
+        Assert.Equal("magnet:?xt=urn:btih:abc", result.DownloadLink);
+        Assert.Equal(50, result.Seeders);
+        Assert.Equal("https://example.org/t/1", result.DescriptionUrl);
+        Assert.Equal("Example", plugin.FullName);
+        Assert.True(plugin.Enabled);
+    }
 }

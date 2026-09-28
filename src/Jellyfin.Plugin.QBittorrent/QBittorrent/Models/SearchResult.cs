@@ -35,6 +35,32 @@ public sealed class SearchResult
     /// Gets the site the result came from.
     /// </summary>
     public string SiteUrl { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the link to the result's description page on the source site.
+    /// </summary>
+    public string DescriptionUrl { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// A search plugin installed in qBittorrent.
+/// </summary>
+public sealed class SearchPlugin
+{
+    /// <summary>
+    /// Gets the plugin's short name.
+    /// </summary>
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the plugin's display name.
+    /// </summary>
+    public string FullName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether the plugin is enabled.
+    /// </summary>
+    public bool Enabled { get; init; }
 }
 
 /// <summary>

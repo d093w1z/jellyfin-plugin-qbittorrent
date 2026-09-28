@@ -835,14 +835,28 @@
 
                     errorEl.textContent = '';
                     submit.disabled = true;
-                    ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('api/qbittorrent/torrents'), data: formData }).then(function () {
+                    // Plain fetch: ApiClient.ajax url-encodes any non-string body, which empties a FormData.
+                    fetch(ApiClient.getUrl('api/qbittorrent/torrents'), {
+                        method: 'POST',
+                        headers: { Authorization: 'MediaBrowser Token="' + ApiClient.accessToken() + '"' },
+                        body: formData
+                    }).then(function (response) {
+                        if (response.ok) { return null; }
+                        return response.text().then(function (text) {
+                            try { var problem = JSON.parse(text); text = problem.detail || problem.title || text; } catch (ignored) { }
+                            return text || ('HTTP ' + response.status);
+                        });
+                    }, function () {
+                        return 'Unable to reach the Jellyfin server.';
+                    }).then(function (error) {
                         submit.disabled = false;
+                        if (error) {
+                            errorEl.textContent = 'Could not add torrent: ' + error;
+                            return;
+                        }
                         addDialog.close();
                         toast('Torrent added');
                         refreshTorrents();
-                    }, function () {
-                        submit.disabled = false;
-                        errorEl.textContent = 'Could not add torrent. Check the magnet link/file and try again.';
                     });
                 });
             })();

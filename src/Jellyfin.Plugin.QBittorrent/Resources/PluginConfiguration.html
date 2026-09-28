@@ -9,75 +9,81 @@
         <div data-role="content">
             <div class="content-primary">
                 <form id="QBittorrentConfigForm">
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="QBittorrentUrl">qBittorrent URL</label>
-                        <input id="QBittorrentUrl" name="QBittorrentUrl" type="text" is="emby-input" placeholder="http://qbittorrent:8080" />
-                        <div class="fieldDescription">Address of the qBittorrent Web UI, reachable from the Jellyfin server. Administrator-only setting.</div>
+                    <div class="verticalSection verticalSection-extrabottompadding">
+                        <h2 class="sectionTitle">Connection</h2>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="QBittorrentUrl">qBittorrent URL</label>
+                            <input id="QBittorrentUrl" name="QBittorrentUrl" type="text" is="emby-input" placeholder="http://qbittorrent:8080" />
+                            <div class="fieldDescription">Address of the qBittorrent Web UI, reachable from the Jellyfin server.</div>
+                        </div>
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="AuthenticationMode">Authentication</label>
+                            <select is="emby-select" id="AuthenticationMode" name="AuthenticationMode" class="emby-select-withcolor emby-select">
+                                <option value="ApiKey">API key (qBittorrent 5.2+)</option>
+                                <option value="UsernamePassword">Username and password</option>
+                            </select>
+                        </div>
+                        <div id="ApiKeyFields" class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="ApiKey">API key</label>
+                            <input id="ApiKey" name="ApiKey" type="password" is="emby-input" autocomplete="off" placeholder="Leave blank to keep current key" />
+                            <div class="fieldDescription">Generated in qBittorrent under Preferences &gt; WebUI &gt; API Key.</div>
+                        </div>
+                        <div id="CredentialFields">
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="Username">Username</label>
+                                <input id="Username" name="Username" type="text" is="emby-input" autocomplete="off" />
+                            </div>
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="Password">Password</label>
+                                <input id="Password" name="Password" type="password" is="emby-input" autocomplete="off" placeholder="Leave blank to keep current password" />
+                            </div>
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1em">
+                            <button is="emby-button" type="button" id="TestConnectionButton" class="raised emby-button" style="margin:0">
+                                <span>Test connection</span>
+                            </button>
+                            <span id="TestConnectionResult" class="fieldDescription" style="margin:0">Uses the saved configuration — save first if you changed it.</span>
+                        </div>
                     </div>
-                    <div class="selectContainer">
-                        <label class="selectLabel" for="AuthenticationMode">Authentication mode</label>
-                        <select is="emby-select" id="AuthenticationMode" name="AuthenticationMode" class="emby-select-withcolor emby-select">
-                            <option value="ApiKey">API key (qBittorrent 5.2+)</option>
-                            <option value="UsernamePassword">Username / password (compatibility fallback)</option>
-                        </select>
+
+                    <div class="verticalSection verticalSection-extrabottompadding">
+                        <h2 class="sectionTitle">Behavior</h2>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="EnableDashboardWidget" name="EnableDashboardWidget" type="checkbox" is="emby-checkbox" />
+                                <span>Show dashboard widget</span>
+                            </label>
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="RefreshIntervalSeconds">Refresh interval (seconds)</label>
+                            <input id="RefreshIntervalSeconds" name="RefreshIntervalSeconds" type="number" is="emby-input" min="1" />
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="EnableCompletionMonitoring" name="EnableCompletionMonitoring" type="checkbox" is="emby-checkbox" />
+                                <span>Monitor torrents for completion</span>
+                            </label>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="ScanLibraryOnCompletion" name="ScanLibraryOnCompletion" type="checkbox" is="emby-checkbox" />
+                                <span>Scan Jellyfin library when a torrent completes</span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="ApiKey">API key</label>
-                        <input id="ApiKey" name="ApiKey" type="password" is="emby-input" autocomplete="off" />
-                        <div class="fieldDescription">Generated in qBittorrent under Preferences &gt; WebUI &gt; API Key. Never shown after saving.</div>
-                    </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="Username">Username</label>
-                        <input id="Username" name="Username" type="text" is="emby-input" autocomplete="off" />
-                    </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="Password">Password</label>
-                        <input id="Password" name="Password" type="password" is="emby-input" autocomplete="off" />
-                        <div class="fieldDescription">Never shown after saving.</div>
-                    </div>
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="EnableDashboardWidget" name="EnableDashboardWidget" type="checkbox" is="emby-checkbox" />
-                            <span>Show dashboard widget</span>
-                        </label>
-                    </div>
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="RefreshIntervalSeconds">Refresh interval (seconds)</label>
-                        <input id="RefreshIntervalSeconds" name="RefreshIntervalSeconds" type="number" is="emby-input" min="1" />
-                    </div>
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="EnableCompletionMonitoring" name="EnableCompletionMonitoring" type="checkbox" is="emby-checkbox" />
-                            <span>Monitor torrents for completion</span>
-                        </label>
-                    </div>
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="ScanLibraryOnCompletion" name="ScanLibraryOnCompletion" type="checkbox" is="emby-checkbox" />
-                            <span>Scan Jellyfin library when a torrent completes</span>
-                        </label>
-                    </div>
-                    <h2 style="margin-top:1.5em">Download profiles</h2>
-                    <div class="fieldDescription">Named category + save path presets offered when adding a torrent, so paths aren't retyped each time.</div>
-                    <div id="ProfilesList" style="margin:0.75em 0"></div>
-                    <div>
-                        <button is="emby-button" type="button" id="AddProfileButton" class="raised">
+
+                    <div class="verticalSection verticalSection-extrabottompadding">
+                        <h2 class="sectionTitle">Download profiles</h2>
+                        <div class="fieldDescription">Category and save-path presets offered when adding a torrent.</div>
+                        <div id="ProfilesList" style="margin:1em 0"></div>
+                        <button is="emby-button" type="button" id="AddProfileButton" class="emby-button" style="margin:0">
                             <span>+ Add profile</span>
                         </button>
                     </div>
 
-                    <div>
-                        <button is="emby-button" type="button" id="TestConnectionButton" class="raised block emby-button">
-                            <span>Test Connection</span>
-                        </button>
-                        <div class="fieldDescription">Tests against the saved configuration below — save first if you just changed it.</div>
-                    </div>
-                    <div id="TestConnectionResult" class="fieldDescription"></div>
-                    <div>
-                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
-                            <span>Save</span>
-                        </button>
-                    </div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                        <span>Save</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -94,7 +100,7 @@
                         '<input is="emby-input" data-field="Name" data-index="' + i + '" placeholder="Name" value="' + escapeAttr(p.Name) + '" style="flex:1 1 120px" />' +
                         '<input is="emby-input" data-field="Category" data-index="' + i + '" placeholder="Category" value="' + escapeAttr(p.Category) + '" style="flex:1 1 140px" />' +
                         '<input is="emby-input" data-field="SavePath" data-index="' + i + '" placeholder="/downloads/..." value="' + escapeAttr(p.SavePath) + '" style="flex:2 1 220px" />' +
-                        '<button is="emby-button" type="button" data-remove="' + i + '">&times;</button>' +
+                        '<button is="paper-icon-button-light" type="button" data-remove="' + i + '" title="Remove profile" aria-label="Remove profile"><span class="material-icons delete" aria-hidden="true"></span></button>' +
                         '</div>';
                 }).join('');
 
@@ -118,6 +124,14 @@
                 return div.innerHTML.replace(/"/g, '&quot;');
             }
 
+            function syncAuthFields() {
+                var apiKey = document.querySelector('#AuthenticationMode').value === 'ApiKey';
+                document.querySelector('#ApiKeyFields').hidden = !apiKey;
+                document.querySelector('#CredentialFields').hidden = apiKey;
+            }
+
+            document.querySelector('#AuthenticationMode').addEventListener('change', syncAuthFields);
+
             document.querySelector('#AddProfileButton').addEventListener('click', function () {
                 profiles.push({ Name: '', Category: '', SavePath: '' });
                 renderProfiles();
@@ -129,6 +143,7 @@
                     ApiClient.getPluginConfiguration(QBittorrentConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#QBittorrentUrl').value = config.QBittorrentUrl;
                         document.querySelector('#AuthenticationMode').value = config.AuthenticationMode;
+                        syncAuthFields();
                         document.querySelector('#Username').value = config.Username;
                         document.querySelector('#EnableDashboardWidget').checked = config.EnableDashboardWidget;
                         document.querySelector('#RefreshIntervalSeconds').value = config.RefreshIntervalSeconds;

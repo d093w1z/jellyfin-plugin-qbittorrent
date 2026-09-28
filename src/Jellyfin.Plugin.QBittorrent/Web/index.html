@@ -5,54 +5,233 @@
     <title>qBittorrent</title>
 </head>
 <body>
-    <div id="QBittorrentPage" data-role="page" class="page type-interior" data-require="emby-input,emby-button">
+    <div id="QBittorrentPage" data-role="page" class="page type-interior">
+        <style>
+            #QBittorrentPage {
+                --qbt-accent: #00a4dc;
+                --qbt-green: #3ec27b;
+                --qbt-amber: #e0a23c;
+                --qbt-red: #f05252;
+                --qbt-muted: color-mix(in srgb, currentColor 55%, transparent);
+                --qbt-border: color-mix(in srgb, currentColor 11%, transparent);
+                --qbt-subtle: color-mix(in srgb, currentColor 4%, transparent);
+                --qbt-hover: color-mix(in srgb, currentColor 7%, transparent);
+                --qbt-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+            }
+            #QBittorrentPage .qbt { max-width: 1040px; margin: 0 auto; padding: 1.5rem 0 4rem; font-size: 14px; line-height: 1.45; }
+            #QBittorrentPage .qbt *, #QBittorrentPage .qbt *::before { box-sizing: border-box; }
+            #QBittorrentPage .qbt .num { font-family: var(--qbt-mono); font-variant-numeric: tabular-nums; }
+            #QBittorrentPage .qbt .muted { color: var(--qbt-muted); }
+
+            /* header */
+            #QBittorrentPage .qbt-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.75rem; }
+            #QBittorrentPage .qbt-header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.015em; margin: 0; margin-right: auto; }
+
+            /* buttons */
+            #QBittorrentPage .qbt-btn {
+                display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+                height: 2.25rem; padding: 0 0.9rem; border-radius: 8px; border: 1px solid var(--qbt-border);
+                background: transparent; color: inherit; font: inherit; font-weight: 500; cursor: pointer;
+                text-decoration: none; white-space: nowrap; transition: background-color .15s, border-color .15s;
+            }
+            #QBittorrentPage .qbt-btn:hover { background: var(--qbt-hover); }
+            #QBittorrentPage .qbt-btn:focus-visible, #QBittorrentPage .qbt :focus-visible { outline: 2px solid var(--qbt-accent); outline-offset: 2px; }
+            #QBittorrentPage .qbt-btn-primary { background: var(--qbt-accent); border-color: var(--qbt-accent); color: #fff; }
+            #QBittorrentPage .qbt-btn-primary:hover { background: color-mix(in srgb, var(--qbt-accent) 85%, #fff); }
+            #QBittorrentPage .qbt-btn-sm { height: 1.9rem; padding: 0 0.7rem; font-size: 13px; }
+            #QBittorrentPage .qbt-btn-danger { color: var(--qbt-red); }
+            #QBittorrentPage .qbt-icon-btn { width: 2rem; height: 2rem; padding: 0; border-color: transparent; color: var(--qbt-muted); }
+            #QBittorrentPage .qbt-icon-btn:hover { color: inherit; }
+            #QBittorrentPage .qbt svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+            /* stats */
+            #QBittorrentPage .qbt-stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--qbt-border); border-radius: 12px; margin-bottom: 1.75rem; }
+            #QBittorrentPage .qbt-stat { padding: 1rem 1.25rem; }
+            #QBittorrentPage .qbt-stat + .qbt-stat { border-left: 1px solid var(--qbt-border); }
+            #QBittorrentPage .qbt-stat-label { font-size: 12px; color: var(--qbt-muted); margin-bottom: 0.3rem; }
+            #QBittorrentPage .qbt-stat-value { font-size: 1.35rem; font-weight: 500; letter-spacing: -0.01em; }
+
+            /* toolbar */
+            #QBittorrentPage .qbt-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+            #QBittorrentPage .qbt-segments { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--qbt-subtle); border: 1px solid var(--qbt-border); overflow-x: auto; max-width: 100%; }
+            #QBittorrentPage .qbt-segment {
+                display: inline-flex; align-items: center; gap: 0.4rem; height: 1.85rem; padding: 0 0.7rem;
+                border: 0; border-radius: 6px; background: transparent; color: var(--qbt-muted); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+            }
+            #QBittorrentPage .qbt-segment:hover { color: inherit; }
+            #QBittorrentPage .qbt-segment[aria-pressed="true"] { background: var(--qbt-hover); color: inherit; font-weight: 500; }
+            #QBittorrentPage .qbt-segment .num { font-size: 11px; color: var(--qbt-muted); }
+            #QBittorrentPage .qbt-search { position: relative; flex: 0 1 260px; min-width: 180px; }
+            #QBittorrentPage .qbt-search svg { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--qbt-muted); pointer-events: none; }
+            #QBittorrentPage .qbt-input {
+                width: 100%; height: 2.25rem; padding: 0 0.75rem; border-radius: 8px; border: 1px solid var(--qbt-border);
+                background: var(--qbt-subtle); color: inherit; font: inherit; transition: border-color .15s;
+            }
+            #QBittorrentPage .qbt-input::placeholder { color: var(--qbt-muted); }
+            #QBittorrentPage .qbt-input:focus { outline: none; border-color: var(--qbt-accent); }
+            #QBittorrentPage .qbt-search .qbt-input { padding-left: 2.1rem; }
+
+            /* list */
+            #QBittorrentPage .qbt-list { border: 1px solid var(--qbt-border); border-radius: 12px; overflow: hidden; }
+            #QBittorrentPage .qbt-list-head, #QBittorrentPage .qbt-row-head {
+                display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 64px 2rem; gap: 1.25rem; align-items: center; padding: 0 1rem;
+            }
+            #QBittorrentPage .qbt-list-head { height: 2.25rem; font-size: 12px; color: var(--qbt-muted); background: var(--qbt-subtle); border-bottom: 1px solid var(--qbt-border); }
+            #QBittorrentPage .qbt-row + .qbt-row { border-top: 1px solid var(--qbt-border); }
+            #QBittorrentPage .qbt-row-head { min-height: 3.75rem; padding-top: 0.6rem; padding-bottom: 0.6rem; cursor: pointer; transition: background-color .12s; }
+            #QBittorrentPage .qbt-row-head:hover, #QBittorrentPage .qbt-row.is-open .qbt-row-head { background: var(--qbt-subtle); }
+            #QBittorrentPage .qbt-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #QBittorrentPage .qbt-meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.15rem; font-size: 12px; color: var(--qbt-muted); white-space: nowrap; overflow: hidden; }
+            #QBittorrentPage .qbt-status { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--qbt-status); }
+            #QBittorrentPage .qbt-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+            #QBittorrentPage .qbt-progress { display: flex; align-items: center; gap: 0.6rem; font-size: 12px; }
+            #QBittorrentPage .qbt-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--qbt-border); overflow: hidden; }
+            #QBittorrentPage .qbt-bar > span { display: block; height: 100%; background: var(--qbt-status); border-radius: inherit; transition: width .4s ease; }
+            #QBittorrentPage .qbt-speeds { display: flex; flex-direction: column; font-size: 12px; }
+            #QBittorrentPage .qbt-eta { font-size: 12px; text-align: right; }
+            #QBittorrentPage .qbt-empty { padding: 4rem 1rem; text-align: center; color: var(--qbt-muted); }
+            #QBittorrentPage .qbt-empty strong { display: block; color: inherit; font-weight: 500; margin-bottom: 0.25rem; }
+
+            /* detail */
+            #QBittorrentPage .qbt-detail { padding: 0.25rem 1rem 1rem; background: var(--qbt-subtle); }
+            #QBittorrentPage .qbt-detail-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--qbt-border); margin-bottom: 0.5rem; }
+            #QBittorrentPage .qbt-tabs { display: flex; gap: 1.25rem; }
+            #QBittorrentPage .qbt-tab { padding: 0.65rem 0; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; color: var(--qbt-muted); font: inherit; font-size: 13px; cursor: pointer; }
+            #QBittorrentPage .qbt-tab:hover { color: inherit; }
+            #QBittorrentPage .qbt-tab[aria-selected="true"] { color: inherit; font-weight: 500; border-bottom-color: currentColor; }
+            #QBittorrentPage .qbt-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.4rem 0; }
+            #QBittorrentPage .qbt-actions .qbt-sep { width: 1px; background: var(--qbt-border); margin: 0.2rem 0.2rem; }
+            #QBittorrentPage .qbt-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+            #QBittorrentPage .qbt-table th { text-align: left; font-weight: 500; color: var(--qbt-muted); padding: 0.5rem 0.75rem 0.5rem 0; }
+            #QBittorrentPage .qbt-table td { padding: 0.45rem 0.75rem 0.45rem 0; border-top: 1px solid var(--qbt-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            #QBittorrentPage .qbt-table .r { text-align: right; }
+            #QBittorrentPage .qbt-detail-msg { padding: 1.25rem 0; font-size: 13px; color: var(--qbt-muted); }
+
+            /* dialog */
+            #QBittorrentPage .qbt-dialog {
+                width: min(440px, calc(100vw - 2rem)); padding: 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+                background: #1c1c1e; color: #ececec; box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+            }
+            #QBittorrentPage .qbt-dialog::backdrop { background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); }
+            #QBittorrentPage .qbt-dialog form { padding: 1.5rem; }
+            #QBittorrentPage .qbt-dialog h2 { font-size: 1.1rem; font-weight: 600; margin: 0 0 1.25rem; }
+            #QBittorrentPage .qbt-field { margin-bottom: 1rem; }
+            #QBittorrentPage .qbt-field > label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 0.4rem; }
+            #QBittorrentPage .qbt-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            #QBittorrentPage .qbt-dialog select.qbt-input { appearance: auto; }
+            #QBittorrentPage .qbt-dialog select.qbt-input option { background: #1c1c1e; }
+            #QBittorrentPage .qbt-file { display: flex; align-items: center; gap: 0.6rem; font-size: 13px; }
+            #QBittorrentPage .qbt-file input { display: none; }
+            #QBittorrentPage .qbt-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.25rem 0 0.9rem; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--qbt-muted); }
+            #QBittorrentPage .qbt-divider::before, #QBittorrentPage .qbt-divider::after { content: ""; flex: 1; height: 1px; background: var(--qbt-border); }
+            #QBittorrentPage .qbt-check { display: flex; align-items: center; gap: 0.5rem; font-size: 13px; cursor: pointer; }
+            #QBittorrentPage .qbt-check input { accent-color: var(--qbt-accent); width: 16px; height: 16px; margin: 0; }
+            #QBittorrentPage .qbt-error { min-height: 1.2em; margin: 0.9rem 0 0; font-size: 13px; color: var(--qbt-red); }
+            #QBittorrentPage .qbt-dialog-footer { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+
+            /* toast */
+            #QBittorrentPage .qbt-toast {
+                position: fixed; left: 50%; bottom: 1.5rem; transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
+                padding: 0.6rem 1rem; border-radius: 10px; background: #1c1c1e; color: #ececec; border: 1px solid rgba(255,255,255,0.1);
+                font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); transition: opacity .2s, transform .2s; z-index: 1000;
+            }
+            #QBittorrentPage .qbt-toast.is-shown { opacity: 1; transform: translate(-50%, 0); }
+
+            @media (max-width: 720px) {
+                #QBittorrentPage .qbt { padding-top: 1rem; }
+                #QBittorrentPage .qbt-stats { grid-template-columns: repeat(2, 1fr); }
+                #QBittorrentPage .qbt-stat:nth-child(3) { border-left: 0; }
+                #QBittorrentPage .qbt-stat:nth-child(n+3) { border-top: 1px solid var(--qbt-border); }
+                #QBittorrentPage .qbt-list-head { display: none; }
+                #QBittorrentPage .qbt-row-head { grid-template-columns: minmax(0, 1fr) auto 2rem; gap: 0.4rem 0.75rem; }
+                #QBittorrentPage .qbt-row-head > :nth-child(1) { grid-column: 1 / 3; }
+                #QBittorrentPage .qbt-row-head > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+                #QBittorrentPage .qbt-row-head > :nth-child(3) { grid-row: 3; flex-direction: row; gap: 0.75rem; }
+                #QBittorrentPage .qbt-row-head > :nth-child(4) { grid-row: 3; grid-column: 2 / -1; }
+                #QBittorrentPage .qbt-row-head > :nth-child(5) { grid-column: 3; grid-row: 1; }
+                #QBittorrentPage .qbt-search { flex: 1 1 100%; }
+                #QBittorrentPage .qbt-table .hide-sm { display: none; }
+            }
+        </style>
+
         <div data-role="content">
-            <div class="content-primary" style="max-width:900px;color:#e6ece8">
-                <h1 style="display:flex;align-items:center;justify-content:space-between;gap:1em;font-size:1.5rem;font-weight:600;margin:0 0 1.1em">
-                    <span>qBittorrent</span>
-                    <a href="#/configurationpage?name=qBittorrent%20Manager" style="font-size:0.62rem;font-weight:500;color:#97a29a;text-decoration:none">&#9881; Settings</a>
-                </h1>
+            <div class="content-primary qbt">
+                <header class="qbt-header">
+                    <h1>qBittorrent</h1>
+                    <a class="qbt-btn" href="#/configurationpage?name=qBittorrent%20Manager" title="Settings" aria-label="Settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span>Settings</span>
+                    </a>
+                    <button id="QbtAddButton" type="button" class="qbt-btn qbt-btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        <span>Add torrent</span>
+                    </button>
+                </header>
 
-                <div id="QbtMeters" style="display:flex;flex-wrap:wrap;gap:2.5em;align-items:flex-end;padding-bottom:1em;margin-bottom:1em;border-bottom:1px solid rgba(255,255,255,0.12)"></div>
+                <section class="qbt-stats" aria-label="Transfer summary">
+                    <div class="qbt-stat"><div class="qbt-stat-label">Download</div><div id="QbtDlValue" class="qbt-stat-value num">—</div></div>
+                    <div class="qbt-stat"><div class="qbt-stat-label">Upload</div><div id="QbtUpValue" class="qbt-stat-value num">—</div></div>
+                    <div class="qbt-stat"><div class="qbt-stat-label">Downloading</div><div id="QbtDownloadingCount" class="qbt-stat-value num">—</div></div>
+                    <div class="qbt-stat"><div class="qbt-stat-label">Seeding</div><div id="QbtSeedingCount" class="qbt-stat-value num">—</div></div>
+                </section>
 
-                <div style="display:flex;flex-wrap:wrap;gap:1em 1.5em;align-items:center;margin-bottom:1.1em">
-                    <input id="QbtSearch" type="search" is="emby-input" placeholder="Search torrents" style="flex:1 1 220px" />
-                    <div id="QbtTabs" style="display:flex;flex-wrap:wrap;gap:1.1em"></div>
-                    <button id="QbtAddButton" is="emby-button" class="raised" style="margin-left:auto">+ Add</button>
+                <div class="qbt-toolbar">
+                    <div id="QbtTabs" class="qbt-segments" role="group" aria-label="Filter by state"></div>
+                    <label class="qbt-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input id="QbtSearch" class="qbt-input" type="search" placeholder="Search torrents" aria-label="Search torrents" />
+                    </label>
                 </div>
 
-                <div id="QbtList"></div>
+                <div class="qbt-list">
+                    <div class="qbt-list-head" aria-hidden="true"><span>Name</span><span>Progress</span><span>Speed</span><span style="text-align:right">ETA</span><span></span></div>
+                    <div id="QbtList"><div class="qbt-empty">Loading…</div></div>
+                </div>
 
-                <dialog id="QbtAddDialog" style="background:#171b19;color:#e6ece8;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:1.5em;max-width:420px;width:90vw">
+                <div id="QbtToast" class="qbt-toast" role="status" aria-live="polite"></div>
+
+                <dialog id="QbtAddDialog" class="qbt-dialog" aria-labelledby="QbtAddTitle">
                     <form id="QbtAddForm" method="dialog">
-                        <h2 style="margin:0 0 1em;font-size:1.1rem;font-weight:600">Add torrent</h2>
+                        <h2 id="QbtAddTitle">Add torrent</h2>
 
-                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Magnet link or URL</label>
-                        <input id="QbtAddMagnet" is="emby-input" type="text" placeholder="magnet:?xt=..." style="width:100%;margin-bottom:0.9em" />
+                        <div class="qbt-field">
+                            <label for="QbtAddMagnet">Magnet link or URL</label>
+                            <input id="QbtAddMagnet" class="qbt-input" type="text" placeholder="magnet:?xt=urn:btih:…" autocomplete="off" />
+                        </div>
 
-                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Or choose a .torrent file</label>
-                        <input id="QbtAddFile" type="file" accept=".torrent" style="width:100%;margin-bottom:0.9em" />
+                        <div class="qbt-divider">or</div>
 
-                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Profile</label>
-                        <select id="QbtAddProfile" is="emby-select" style="width:100%;margin-bottom:0.9em">
-                            <option value="">None — set manually</option>
-                        </select>
+                        <div class="qbt-field qbt-file">
+                            <label class="qbt-btn qbt-btn-sm" for="QbtAddFile">Choose .torrent file</label>
+                            <input id="QbtAddFile" type="file" accept=".torrent" />
+                            <span id="QbtAddFileName" class="muted">No file selected</span>
+                        </div>
 
-                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Category</label>
-                        <input id="QbtAddCategory" is="emby-input" type="text" style="width:100%;margin-bottom:0.9em" />
+                        <div class="qbt-field">
+                            <label for="QbtAddProfile">Profile</label>
+                            <select id="QbtAddProfile" class="qbt-input">
+                                <option value="">None — set manually</option>
+                            </select>
+                        </div>
 
-                        <label style="display:block;font-size:0.82rem;color:#97a29a;margin-bottom:0.3em">Save path</label>
-                        <input id="QbtAddSavePath" is="emby-input" type="text" placeholder="/downloads/..." style="width:100%;margin-bottom:0.9em" />
+                        <div class="qbt-row2">
+                            <div class="qbt-field">
+                                <label for="QbtAddCategory">Category</label>
+                                <input id="QbtAddCategory" class="qbt-input" type="text" placeholder="Optional" />
+                            </div>
+                            <div class="qbt-field">
+                                <label for="QbtAddSavePath">Save path</label>
+                                <input id="QbtAddSavePath" class="qbt-input" type="text" placeholder="Default" />
+                            </div>
+                        </div>
 
-                        <label style="display:flex;align-items:center;gap:0.5em;margin-bottom:1.2em;font-size:0.88rem">
-                            <input id="QbtAddStart" type="checkbox" checked /> Start immediately
-                        </label>
+                        <label class="qbt-check"><input id="QbtAddStart" type="checkbox" checked /> Start immediately</label>
 
-                        <div id="QbtAddError" style="color:#ff6b5e;font-size:0.82rem;margin-bottom:0.8em"></div>
+                        <div id="QbtAddError" class="qbt-error" role="alert"></div>
 
-                        <div style="display:flex;justify-content:flex-end;gap:0.8em">
-                            <button type="button" id="QbtAddCancel" is="emby-button">Cancel</button>
-                            <button type="submit" id="QbtAddSubmit" is="emby-button" class="raised">Add torrent</button>
+                        <div class="qbt-dialog-footer">
+                            <button type="button" id="QbtAddCancel" class="qbt-btn">Cancel</button>
+                            <button type="submit" id="QbtAddSubmit" class="qbt-btn qbt-btn-primary">Add torrent</button>
                         </div>
                     </form>
                 </dialog>
@@ -61,30 +240,29 @@
         <script type="text/javascript">
             (function () {
                 var REFRESH_MS = 3000;
-                var COLOR_TEXT = '#e6ece8';
-                var COLOR_DIM = '#97a29a';
-                var COLOR_DOWN = '#4fd68c';
-                var COLOR_UP = '#e2a155';
-                var COLOR_ERROR = '#ff6b5e';
-                var COLOR_BORDER = 'rgba(255,255,255,0.12)';
-                var COLOR_SURFACE = '#1b201d';
-                var FONT_MONO = 'ui-monospace,"Cascadia Code","SF Mono","JetBrains Mono",Consolas,monospace';
-                var FONT_SANS = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+                var page = document.querySelector('#QBittorrentPage');
 
                 var TABS = [
                     ['', 'All'], ['Downloading', 'Downloading'], ['Seeding', 'Seeding'],
                     ['Paused', 'Paused'], ['Completed', 'Completed'], ['Error', 'Errored']
                 ];
 
-                var state = { search: '', filterState: '', torrents: [], pollHandle: null, openHash: null, openTab: 'files' };
+                // States where the row's quick action pauses; everything else offers resume.
+                var ACTIVE_STATES = ['Downloading', 'Seeding', 'Checking', 'Queued'];
+
+                var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+                var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+
+                var state = { search: '', filterState: '', torrents: [], pollHandle: null, openHash: null, openTab: 'files', detailCache: {} };
 
                 function stateColor(s) {
                     switch (s) {
-                        case 'Downloading': return COLOR_DOWN;
-                        case 'Checking': return COLOR_UP;
-                        case 'Seeding': return COLOR_UP;
-                        case 'Error': return COLOR_ERROR;
-                        default: return COLOR_DIM;
+                        case 'Downloading': return 'var(--qbt-accent)';
+                        case 'Seeding': return 'var(--qbt-green)';
+                        case 'Completed': return 'var(--qbt-green)';
+                        case 'Checking': return 'var(--qbt-amber)';
+                        case 'Error': return 'var(--qbt-red)';
+                        default: return 'var(--qbt-muted)';
                     }
                 }
 
@@ -107,18 +285,10 @@
                     return m + 'm';
                 }
 
-                // Logarithmic 0-8 level so both a 50 KB/s trickle and a 100 MB/s
-                // LAN transfer land somewhere legible on an 8-bar meter.
-                function speedLevel(bytesPerSec) {
-                    if (!bytesPerSec || bytesPerSec <= 0) { return 0; }
-                    var level = Math.floor(Math.log2(bytesPerSec / 1024)) + 1;
-                    return Math.max(0, Math.min(8, level));
-                }
-
                 function escapeHtml(s) {
                     var div = document.createElement('div');
                     div.textContent = s == null ? '' : String(s);
-                    return div.innerHTML;
+                    return div.innerHTML.replace(/"/g, '&quot;');
                 }
 
                 function ajax(path) {
@@ -128,68 +298,54 @@
                 function apiPost(path) { return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('api/' + path) }); }
                 function apiDelete(path) { return ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl('api/' + path) }); }
 
-                // --- meters -----------------------------------------------------------
-
-                function buildMeter(id, label, color) {
-                    var bars = '';
-                    for (var i = 0; i < 8; i++) {
-                        var h = 25 + i * 10.7;
-                        bars += '<span data-bar style="width:4px;height:' + h + '%;background:' + COLOR_BORDER + ';border-radius:1px;display:inline-block;transition:background-color .4s ease"></span>';
-                    }
-                    return '' +
-                        '<div style="display:flex;flex-direction:column;gap:0.35em">' +
-                        '  <span style="font-family:' + FONT_SANS + ';font-size:0.72rem;color:' + COLOR_DIM + '">' + label + '</span>' +
-                        '  <div style="display:flex;align-items:flex-end;gap:0.75em">' +
-                        '    <span id="' + id + 'Value" style="font-family:' + FONT_MONO + ';font-variant-numeric:tabular-nums;font-size:1.2rem;font-weight:500;min-width:6.5ch;color:' + color + '">0 B/s</span>' +
-                        '    <div id="' + id + 'Bars" style="display:flex;align-items:flex-end;gap:2px;height:18px">' + bars + '</div>' +
-                        '  </div>' +
-                        '</div>';
+                var toastTimer = null;
+                function toast(message) {
+                    var el = page.querySelector('#QbtToast');
+                    el.textContent = message;
+                    el.classList.add('is-shown');
+                    clearTimeout(toastTimer);
+                    toastTimer = setTimeout(function () { el.classList.remove('is-shown'); }, 3500);
                 }
 
-                document.querySelector('#QbtMeters').innerHTML =
-                    buildMeter('QbtDl', 'Down', COLOR_DOWN) +
-                    buildMeter('QbtUp', 'Up', COLOR_UP) +
-                    '<span id="QbtCounts" style="font-family:' + FONT_SANS + ';font-size:0.85rem;color:' + COLOR_DIM + ';align-self:flex-end;margin-left:auto"></span>';
-
-                function setBars(id, level, color) {
-                    var bars = document.querySelectorAll('#' + id + 'Bars [data-bar]');
-                    bars.forEach(function (bar, i) {
-                        bar.style.background = i < level ? color : COLOR_BORDER;
-                    });
-                }
+                // --- stats -------------------------------------------------------------
 
                 function refreshTransfer() {
                     ajax('qbittorrent/transfer').then(function (t) {
-                        document.querySelector('#QbtDlValue').textContent = formatSpeed(t.DownloadSpeed);
-                        document.querySelector('#QbtUpValue').textContent = formatSpeed(t.UploadSpeed);
-                        setBars('QbtDl', speedLevel(t.DownloadSpeed), COLOR_DOWN);
-                        setBars('QbtUp', speedLevel(t.UploadSpeed), COLOR_UP);
+                        page.querySelector('#QbtDlValue').textContent = formatSpeed(t.DownloadSpeed);
+                        page.querySelector('#QbtUpValue').textContent = formatSpeed(t.UploadSpeed);
                     }, function () {
-                        document.querySelector('#QbtDlValue').textContent = '—';
-                        document.querySelector('#QbtUpValue').textContent = '—';
-                        setBars('QbtDl', 0, COLOR_DOWN);
-                        setBars('QbtUp', 0, COLOR_UP);
+                        page.querySelector('#QbtDlValue').textContent = '—';
+                        page.querySelector('#QbtUpValue').textContent = '—';
                     });
+                }
+
+                function countState(s) {
+                    return state.torrents.filter(function (t) { return t.State === s; }).length;
+                }
+
+                function renderCounts() {
+                    page.querySelector('#QbtDownloadingCount').textContent = countState('Downloading');
+                    page.querySelector('#QbtSeedingCount').textContent = countState('Seeding');
+                    renderTabs();
                 }
 
                 // --- filter tabs --------------------------------------------------------
 
-                function tabStyle(active) {
-                    return 'font-family:' + FONT_SANS + ';font-size:0.85rem;background:none;border:none;cursor:pointer;padding:0 0 0.35em;' +
-                        'border-bottom:2px solid ' + (active ? COLOR_DOWN : 'transparent') + ';color:' + (active ? COLOR_TEXT : COLOR_DIM) + ';';
+                function renderTabs() {
+                    page.querySelector('#QbtTabs').innerHTML = TABS.map(function (tab) {
+                        var count = tab[0] ? countState(tab[0]) : state.torrents.length;
+                        return '<button type="button" class="qbt-segment" data-state="' + tab[0] + '" aria-pressed="' + (state.filterState === tab[0]) + '">' +
+                            tab[1] + '<span class="num">' + count + '</span></button>';
+                    }).join('');
                 }
 
-                document.querySelector('#QbtTabs').innerHTML = TABS.map(function (tab, i) {
-                    return '<button data-state="' + tab[0] + '" style="' + tabStyle(i === 0) + '">' + tab[1] + '</button>';
-                }).join('');
+                renderTabs();
 
-                document.querySelector('#QbtTabs').addEventListener('click', function (e) {
+                page.querySelector('#QbtTabs').addEventListener('click', function (e) {
                     var button = e.target.closest('button');
                     if (!button) { return; }
                     state.filterState = button.getAttribute('data-state');
-                    document.querySelectorAll('#QbtTabs button').forEach(function (b) {
-                        b.setAttribute('style', tabStyle(b === button));
-                    });
+                    renderTabs();
                     renderList();
                 });
 
@@ -200,20 +356,14 @@
                     // pageSize=200 fetch. Add a real server-side aggregate-counts endpoint if
                     // libraries regularly exceed 200 torrents.
                     var query = 'pageSize=200' + (state.search ? '&search=' + encodeURIComponent(state.search) : '');
-                    ajax('qbittorrent/torrents?' + query).then(function (page) {
-                        state.torrents = page.Items || [];
+                    ajax('qbittorrent/torrents?' + query).then(function (result) {
+                        state.torrents = result.Items || [];
                         renderCounts();
                         renderList();
                     }, function () {
-                        document.querySelector('#QbtList').innerHTML =
-                            '<div style="font-family:' + FONT_SANS + ';color:' + COLOR_DIM + ';padding:3em 0;text-align:center">Unable to reach qBittorrent.</div>';
+                        page.querySelector('#QbtList').innerHTML =
+                            '<div class="qbt-empty"><strong>Unable to reach qBittorrent</strong>Check the connection in Settings.</div>';
                     });
-                }
-
-                function renderCounts() {
-                    var downloading = state.torrents.filter(function (t) { return t.State === 'Downloading'; }).length;
-                    var seeding = state.torrents.filter(function (t) { return t.State === 'Seeding'; }).length;
-                    document.querySelector('#QbtCounts').textContent = downloading + ' downloading, ' + seeding + ' seeding';
                 }
 
                 function visibleTorrents() {
@@ -222,22 +372,17 @@
                 }
 
                 function renderList() {
-                    var list = document.querySelector('#QbtList');
+                    var list = page.querySelector('#QbtList');
                     var visible = visibleTorrents();
 
                     if (visible.length === 0) {
-                        list.innerHTML = '<div style="font-family:' + FONT_SANS + ';color:' + COLOR_DIM + ';padding:3em 0;text-align:center">No torrents here.</div>';
+                        list.innerHTML = state.search || state.filterState
+                            ? '<div class="qbt-empty"><strong>No matching torrents</strong>Try a different filter or search.</div>'
+                            : '<div class="qbt-empty"><strong>No torrents yet</strong>Add a magnet link or .torrent file to get started.</div>';
                         return;
                     }
 
                     list.innerHTML = visible.map(renderRow).join('');
-
-                    visible.forEach(function (t) {
-                        var head = list.querySelector('[data-hash="' + t.Hash + '"] [data-row-head]');
-                        if (head) {
-                            head.addEventListener('click', function () { toggleDetail(t.Hash); });
-                        }
-                    });
 
                     if (state.openHash && visible.some(function (t) { return t.Hash === state.openHash; })) {
                         renderDetail(state.openHash);
@@ -247,30 +392,48 @@
                 function renderRow(t) {
                     var progressPct = Math.round((t.Progress || 0) * 100);
                     var isOpen = state.openHash === t.Hash;
-                    var color = stateColor(t.State);
-                    var isLast = state.torrents.indexOf(t) === state.torrents.length - 1;
+                    var isActive = ACTIVE_STATES.indexOf(t.State) !== -1;
+                    var hash = escapeHtml(t.Hash);
 
                     return '' +
-                        '<div data-hash="' + escapeHtml(t.Hash) + '" style="border-top:1px solid ' + COLOR_BORDER + ';' + (isLast ? 'border-bottom:1px solid ' + COLOR_BORDER + ';' : '') + 'padding:0.9em 0">' +
-                        '  <div data-row-head style="display:flex;justify-content:space-between;align-items:baseline;gap:1em;cursor:pointer;font-family:' + FONT_SANS + '">' +
-                        '    <span style="font-size:0.95rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(t.Name) + '</span>' +
-                        '    <span style="font-family:' + FONT_MONO + ';font-size:0.72rem;font-weight:600;letter-spacing:0.02em;white-space:nowrap;flex-shrink:0;color:' + color + '">' + escapeHtml(t.State) + '</span>' +
+                        '<div class="qbt-row' + (isOpen ? ' is-open' : '') + '" data-hash="' + hash + '" style="--qbt-status:' + stateColor(t.State) + '">' +
+                        '  <div class="qbt-row-head" data-row-head role="button" tabindex="0" aria-expanded="' + isOpen + '">' +
+                        '    <div style="min-width:0">' +
+                        '      <div class="qbt-name" title="' + escapeHtml(t.Name) + '">' + escapeHtml(t.Name) + '</div>' +
+                        '      <div class="qbt-meta"><span class="qbt-status">' + escapeHtml(t.State) + '</span><span>·</span>' +
+                        '        <span class="num">' + formatBytes(t.Size) + '</span><span>·</span><span>' + escapeHtml(t.Category || 'Uncategorized') + '</span></div>' +
+                        '    </div>' +
+                        '    <div class="qbt-progress"><div class="qbt-bar"><span style="width:' + progressPct + '%"></span></div><span class="num" style="min-width:3ch;text-align:right">' + progressPct + '%</span></div>' +
+                        '    <div class="qbt-speeds num"><span>&#8595; ' + formatSpeed(t.DownloadSpeed) + '</span><span class="muted">&#8593; ' + formatSpeed(t.UploadSpeed) + '</span></div>' +
+                        '    <div class="qbt-eta num muted">' + (t.State === 'Downloading' ? formatEta(t.Eta) : '—') + '</div>' +
+                        '    <button type="button" class="qbt-btn qbt-icon-btn" data-quick="' + (isActive ? 'pause' : 'resume') + '" title="' + (isActive ? 'Pause' : 'Resume') + '" aria-label="' + (isActive ? 'Pause' : 'Resume') + '">' +
+                        (isActive ? ICON_PAUSE : ICON_PLAY) + '</button>' +
                         '  </div>' +
-                        '  <div style="position:relative;height:7px;background:' + COLOR_SURFACE + ';border-radius:3px;margin:0.65em 0 0.55em;overflow:hidden">' +
-                        '    <div style="position:absolute;inset:0;width:' + progressPct + '%;background:' + color + '"></div>' +
-                        '  </div>' +
-                        '  <div style="display:flex;flex-wrap:wrap;gap:0 1.1em;font-family:' + FONT_SANS + ';font-size:0.82rem;color:' + COLOR_DIM + '">' +
-                        '    <span style="font-family:' + FONT_MONO + '">' + progressPct + '%</span>' +
-                        '    <span style="font-family:' + FONT_MONO + '">&#8595; ' + formatSpeed(t.DownloadSpeed) + '</span>' +
-                        '    <span style="font-family:' + FONT_MONO + '">&#8593; ' + formatSpeed(t.UploadSpeed) + '</span>' +
-                        '    <span style="font-family:' + FONT_MONO + '">eta ' + formatEta(t.Eta) + '</span>' +
-                        '    <span style="font-family:' + FONT_MONO + '">seeds ' + t.Seeds + '</span>' +
-                        '    <span style="font-family:' + FONT_MONO + '">peers ' + t.Peers + '</span>' +
-                        '    <span style="margin-left:auto">' + escapeHtml(t.Category || 'uncategorized') + '</span>' +
-                        '  </div>' +
-                        (isOpen ? '<div id="QbtDetail" style="margin-top:1em"></div>' : '') +
+                        (isOpen ? '<div id="QbtDetail" class="qbt-detail"></div>' : '') +
                         '</div>';
                 }
+
+                function rowHashOf(el) {
+                    var row = el.closest('[data-hash]');
+                    return row ? row.getAttribute('data-hash') : null;
+                }
+
+                page.querySelector('#QbtList').addEventListener('click', function (e) {
+                    var quick = e.target.closest('[data-quick]');
+                    if (quick) {
+                        runAction(rowHashOf(quick), quick.getAttribute('data-quick'));
+                        return;
+                    }
+                    var head = e.target.closest('[data-row-head]');
+                    if (head) { toggleDetail(rowHashOf(head)); }
+                });
+
+                page.querySelector('#QbtList').addEventListener('keydown', function (e) {
+                    if ((e.key === 'Enter' || e.key === ' ') && e.target.hasAttribute('data-row-head')) {
+                        e.preventDefault();
+                        toggleDetail(rowHashOf(e.target));
+                    }
+                });
 
                 function toggleDetail(hash) {
                     state.openHash = state.openHash === hash ? null : hash;
@@ -302,41 +465,41 @@
                         if (action === 'delete' || action === 'delete-files') { state.openHash = null; }
                         refreshTorrents();
                     }, function () {
-                        window.alert('Action failed. See server logs for details.');
+                        toast('Action failed. See server logs for details.');
                     });
                 }
 
                 function renderDetail(hash) {
-                    var container = document.querySelector('#QbtDetail');
+                    var container = page.querySelector('#QbtDetail');
                     if (!container) { return; }
 
-                    var tabs = ['files', 'peers', 'trackers'];
+                    var tabs = [['files', 'Files'], ['peers', 'Peers'], ['trackers', 'Trackers']];
                     var actions = [
-                        ['resume', 'Resume', false], ['pause', 'Pause', false], ['force-resume', 'Force resume', false],
-                        ['recheck', 'Recheck', false], ['reannounce', 'Reannounce', false],
-                        ['delete', 'Delete', true], ['delete-files', 'Delete + files', true]
+                        ['resume', 'Resume'], ['pause', 'Pause'], ['force-resume', 'Force resume'],
+                        ['recheck', 'Recheck'], ['reannounce', 'Reannounce'], null,
+                        ['delete', 'Delete', true], ['delete-files', 'Delete with files', true]
                     ];
-
-                    function detailTabStyle(active) {
-                        return 'font-family:' + FONT_SANS + ';font-size:0.78rem;background:none;border:none;cursor:pointer;padding:0 0 0.25em;text-transform:capitalize;' +
-                            'border-bottom:2px solid ' + (active ? COLOR_DOWN : 'transparent') + ';color:' + (active ? COLOR_TEXT : COLOR_DIM) + ';';
-                    }
+                    var cacheKey = hash + '/' + state.openTab;
 
                     container.innerHTML =
-                        '<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.2em;margin-bottom:1em;font-family:' + FONT_SANS + '">' +
-                        actions.map(function (a) {
-                            return '<button data-action="' + a[0] + '" style="background:none;border:none;cursor:pointer;font-size:0.82rem;padding:0.2em 0;color:' + (a[2] ? COLOR_ERROR : COLOR_DIM) + '">' + a[1] + '</button>';
-                        }).join('') +
-                        '</div>' +
-                        '<div style="display:flex;gap:1.2em;margin-bottom:0.8em">' +
+                        '<div class="qbt-detail-bar">' +
+                        '  <div class="qbt-tabs" role="tablist">' +
                         tabs.map(function (tab) {
-                            return '<button data-tab="' + tab + '" style="' + detailTabStyle(state.openTab === tab) + '">' + tab + '</button>';
+                            return '<button type="button" class="qbt-tab" role="tab" data-tab="' + tab[0] + '" aria-selected="' + (state.openTab === tab[0]) + '">' + tab[1] + '</button>';
                         }).join('') +
-                        '</div><div id="QbtDetailBody" style="font-family:' + FONT_MONO + ';font-size:0.8rem;color:' + COLOR_DIM + '">Loading…</div>';
+                        '  </div>' +
+                        '  <div class="qbt-actions">' +
+                        actions.map(function (a) {
+                            if (!a) { return '<span class="qbt-sep"></span>'; }
+                            return '<button type="button" class="qbt-btn qbt-btn-sm' + (a[2] ? ' qbt-btn-danger' : '') + '" data-action="' + a[0] + '">' + a[1] + '</button>';
+                        }).join('') +
+                        '  </div>' +
+                        '</div>' +
+                        '<div id="QbtDetailBody">' + (state.detailCache[cacheKey] || '<div class="qbt-detail-msg">Loading…</div>') + '</div>';
 
-                    tabs.forEach(function (tab) {
-                        container.querySelector('[data-tab="' + tab + '"]').addEventListener('click', function () {
-                            state.openTab = tab;
+                    container.querySelectorAll('[data-tab]').forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            state.openTab = button.getAttribute('data-tab');
                             renderDetail(hash);
                         });
                     });
@@ -345,42 +508,48 @@
                         button.addEventListener('click', function () { runAction(hash, button.getAttribute('data-action')); });
                     });
 
-                    ajax('qbittorrent/torrents/' + hash + '/' + state.openTab).then(function (items) {
+                    var tab = state.openTab;
+                    ajax('qbittorrent/torrents/' + hash + '/' + tab).then(function (items) {
+                        state.detailCache = {};
+                        state.detailCache[cacheKey] = renderDetailTable(tab, items);
                         var body = container.querySelector('#QbtDetailBody');
-                        if (!body) { return; }
-                        body.innerHTML = renderDetailTable(state.openTab, items);
+                        if (body && state.openTab === tab) { body.innerHTML = state.detailCache[cacheKey]; }
                     }, function () {
                         var body = container.querySelector('#QbtDetailBody');
-                        if (body) { body.textContent = 'Unable to load.'; }
+                        if (body) { body.innerHTML = '<div class="qbt-detail-msg">Unable to load.</div>'; }
                     });
                 }
 
-                function cell(text) {
-                    return '<td style="padding:0.3em 1em 0.3em 0;border-top:1px solid ' + COLOR_BORDER + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw">' + text + '</td>';
+                function table(headers, rows) {
+                    return '<table class="qbt-table"><thead><tr>' +
+                        headers.map(function (h) { return '<th class="' + (h[1] || '') + '" style="' + (h[2] ? 'width:' + h[2] : '') + '">' + h[0] + '</th>'; }).join('') +
+                        '</tr></thead><tbody>' +
+                        rows.map(function (r) {
+                            return '<tr>' + r.map(function (c, i) { return '<td class="' + (headers[i][1] || '') + '" title="' + c.replace(/<[^>]*>/g, '') + '">' + c + '</td>'; }).join('') + '</tr>';
+                        }).join('') +
+                        '</tbody></table>';
                 }
 
                 function renderDetailTable(tab, items) {
                     if (!items || items.length === 0) {
-                        return '<div style="font-family:' + FONT_SANS + ';padding:1em 0">Nothing to show.</div>';
+                        return '<div class="qbt-detail-msg">Nothing to show.</div>';
                     }
 
-                    var rows;
                     if (tab === 'files') {
-                        rows = items.map(function (f) {
-                            return '<tr>' + cell(escapeHtml(f.Name)) + cell(formatBytes(f.Size)) + cell(Math.round((f.Progress || 0) * 100) + '%') + '</tr>';
-                        });
-                    } else if (tab === 'peers') {
-                        rows = items.map(function (p) {
-                            return '<tr>' + cell(escapeHtml(p.Ip) + ':' + p.Port) + cell(escapeHtml(p.Client)) +
-                                cell('&#8595; ' + formatSpeed(p.DownloadSpeed)) + cell('&#8593; ' + formatSpeed(p.UploadSpeed)) + '</tr>';
-                        });
-                    } else {
-                        rows = items.map(function (t) {
-                            return '<tr>' + cell(escapeHtml(t.Url)) + cell(escapeHtml(t.Status)) + cell(String(t.NumPeers)) + '</tr>';
-                        });
+                        return table([['Name'], ['Size', 'r num', '90px'], ['Progress', 'r num', '80px']], items.map(function (f) {
+                            return [escapeHtml(f.Name), formatBytes(f.Size), Math.round((f.Progress || 0) * 100) + '%'];
+                        }));
                     }
 
-                    return '<table style="width:100%;border-collapse:collapse">' + rows.join('') + '</table>';
+                    if (tab === 'peers') {
+                        return table([['Address', 'num'], ['Client', 'hide-sm'], ['Down', 'r num', '100px'], ['Up', 'r num', '100px']], items.map(function (p) {
+                            return [escapeHtml(p.Ip) + ':' + p.Port, escapeHtml(p.Client), formatSpeed(p.DownloadSpeed), formatSpeed(p.UploadSpeed)];
+                        }));
+                    }
+
+                    return table([['URL'], ['Status', '', '110px'], ['Peers', 'r num', '60px']], items.map(function (t) {
+                        return [escapeHtml(t.Url), escapeHtml(t.Status), String(t.NumPeers)];
+                    }));
                 }
 
                 // --- polling & search ----------------------------------------------------
@@ -400,19 +569,19 @@
                     }
                 }
 
-                document.querySelector('#QBittorrentPage').addEventListener('pageshow', startPolling);
-                document.querySelector('#QBittorrentPage').addEventListener('pagehide', stopPolling);
+                page.addEventListener('pageshow', startPolling);
+                page.addEventListener('pagehide', stopPolling);
 
                 document.addEventListener('visibilitychange', function () {
                     if (document.hidden) {
                         stopPolling();
-                    } else if (document.querySelector('#QBittorrentPage').classList.contains('page')) {
+                    } else if (page.classList.contains('page')) {
                         startPolling();
                     }
                 });
 
                 var searchTimer = null;
-                document.querySelector('#QbtSearch').addEventListener('input', function (e) {
+                page.querySelector('#QbtSearch').addEventListener('input', function (e) {
                     clearTimeout(searchTimer);
                     var value = e.target.value;
                     searchTimer = setTimeout(function () {
@@ -423,39 +592,53 @@
 
                 // --- add torrent ---------------------------------------------------------
 
-                var addDialog = document.querySelector('#QbtAddDialog');
-                var addForm = document.querySelector('#QbtAddForm');
-                var addProfileSelect = document.querySelector('#QbtAddProfile');
+                var addDialog = page.querySelector('#QbtAddDialog');
+                var addForm = page.querySelector('#QbtAddForm');
+                var addProfileSelect = page.querySelector('#QbtAddProfile');
+                var addFileInput = page.querySelector('#QbtAddFile');
+                var addFileName = page.querySelector('#QbtAddFileName');
                 var profiles = [];
 
-                document.querySelector('#QbtAddButton').addEventListener('click', function () {
+                page.querySelector('#QbtAddButton').addEventListener('click', function () {
                     addForm.reset();
-                    document.querySelector('#QbtAddError').textContent = '';
+                    addFileName.textContent = 'No file selected';
+                    page.querySelector('#QbtAddError').textContent = '';
                     ajax('qbittorrent/profiles').then(function (list) {
                         profiles = list || [];
                         addProfileSelect.innerHTML = '<option value="">None — set manually</option>' +
                             profiles.map(function (p, i) { return '<option value="' + i + '">' + escapeHtml(p.Name) + '</option>'; }).join('');
                     });
                     addDialog.showModal();
+                    page.querySelector('#QbtAddMagnet').focus();
                 });
 
-                document.querySelector('#QbtAddCancel').addEventListener('click', function () { addDialog.close(); });
+                page.querySelector('#QbtAddCancel').addEventListener('click', function () { addDialog.close(); });
+
+                // Close when clicking the backdrop.
+                addDialog.addEventListener('click', function (e) {
+                    if (e.target === addDialog) { addDialog.close(); }
+                });
+
+                addFileInput.addEventListener('change', function () {
+                    var file = addFileInput.files && addFileInput.files[0];
+                    addFileName.textContent = file ? file.name : 'No file selected';
+                });
 
                 addProfileSelect.addEventListener('change', function () {
                     var profile = profiles[parseInt(addProfileSelect.value, 10)];
                     if (profile) {
-                        document.querySelector('#QbtAddCategory').value = profile.Category || '';
-                        document.querySelector('#QbtAddSavePath').value = profile.SavePath || '';
+                        page.querySelector('#QbtAddCategory').value = profile.Category || '';
+                        page.querySelector('#QbtAddSavePath').value = profile.SavePath || '';
                     }
                 });
 
                 addForm.addEventListener('submit', function (e) {
                     e.preventDefault();
 
-                    var magnet = document.querySelector('#QbtAddMagnet').value.trim();
-                    var fileInput = document.querySelector('#QbtAddFile');
-                    var file = fileInput.files && fileInput.files[0];
-                    var errorEl = document.querySelector('#QbtAddError');
+                    var magnet = page.querySelector('#QbtAddMagnet').value.trim();
+                    var file = addFileInput.files && addFileInput.files[0];
+                    var errorEl = page.querySelector('#QbtAddError');
+                    var submit = page.querySelector('#QbtAddSubmit');
 
                     if (!magnet && !file) {
                         errorEl.textContent = 'Enter a magnet link/URL or choose a .torrent file.';
@@ -465,15 +648,19 @@
                     var formData = new FormData();
                     if (file) { formData.append('torrentFile', file); }
                     if (magnet) { formData.append('magnetUri', magnet); }
-                    formData.append('category', document.querySelector('#QbtAddCategory').value);
-                    formData.append('savePath', document.querySelector('#QbtAddSavePath').value);
-                    formData.append('startImmediately', document.querySelector('#QbtAddStart').checked);
+                    formData.append('category', page.querySelector('#QbtAddCategory').value);
+                    formData.append('savePath', page.querySelector('#QbtAddSavePath').value);
+                    formData.append('startImmediately', page.querySelector('#QbtAddStart').checked);
 
                     errorEl.textContent = '';
+                    submit.disabled = true;
                     ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('api/qbittorrent/torrents'), data: formData }).then(function () {
+                        submit.disabled = false;
                         addDialog.close();
+                        toast('Torrent added');
                         refreshTorrents();
                     }, function () {
+                        submit.disabled = false;
                         errorEl.textContent = 'Could not add torrent. Check the magnet link/file and try again.';
                     });
                 });

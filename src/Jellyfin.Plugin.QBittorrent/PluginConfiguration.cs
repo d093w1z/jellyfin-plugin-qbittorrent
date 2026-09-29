@@ -38,6 +38,12 @@ public sealed class DownloadProfile
     /// Gets or sets the save path qBittorrent should use.
     /// </summary>
     public string SavePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the id of the Jellyfin library to scan when a torrent in this
+    /// profile's category completes. Empty means scan all libraries.
+    /// </summary>
+    public string JellyfinLibraryId { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -85,6 +91,11 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets a value indicating whether completion monitoring is enabled.
     /// </summary>
     public bool EnableCompletionMonitoring { get; set; }
+
+    /// <summary>
+    /// Gets or sets how often completion monitoring polls qBittorrent, in seconds.
+    /// </summary>
+    public int CompletionPollIntervalSeconds { get; set; } = 30;
 
     /// <summary>
     /// Gets or sets a value indicating whether a library scan is triggered on torrent completion.

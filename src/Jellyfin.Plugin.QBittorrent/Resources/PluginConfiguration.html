@@ -64,17 +64,23 @@
                                 <span>Monitor torrents for completion</span>
                             </label>
                         </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="CompletionPollIntervalSeconds">Completion check interval (seconds)</label>
+                            <input id="CompletionPollIntervalSeconds" name="CompletionPollIntervalSeconds" type="number" is="emby-input" min="5" />
+                            <div class="fieldDescription">How often the server asks qBittorrent whether torrents have finished. Minimum 5.</div>
+                        </div>
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input id="ScanLibraryOnCompletion" name="ScanLibraryOnCompletion" type="checkbox" is="emby-checkbox" />
                                 <span>Scan Jellyfin library when a torrent completes</span>
                             </label>
+                            <div class="fieldDescription checkboxFieldDescription">Scans the library chosen on the profile whose category matches the torrent, or all libraries if no profile matches.</div>
                         </div>
                     </div>
 
                     <div class="verticalSection verticalSection-extrabottompadding">
                         <h2 class="sectionTitle">Download profiles</h2>
-                        <div class="fieldDescription">Category and save-path presets offered when adding a torrent.</div>
+                        <div class="fieldDescription">Category and save-path presets offered when adding a torrent. The library is scanned when a torrent in that category completes.</div>
                         <div id="ProfilesList" style="margin:1em 0"></div>
                         <button is="emby-button" type="button" id="AddProfileButton" class="emby-button" style="margin:0">
                             <span>+ Add profile</span>
@@ -92,6 +98,7 @@
                 pluginUniqueId: 'f6a0e4c2-3b3e-4b9a-9f4e-8a4a1d2c9b7d'
             };
             var profiles = [];
+            var libraries = [];
 
             function renderProfiles() {
                 var list = document.querySelector('#ProfilesList');
@@ -100,14 +107,22 @@
                         '<input is="emby-input" data-field="Name" data-index="' + i + '" placeholder="Name" value="' + escapeAttr(p.Name) + '" style="flex:1 1 120px" />' +
                         '<input is="emby-input" data-field="Category" data-index="' + i + '" placeholder="Category" value="' + escapeAttr(p.Category) + '" style="flex:1 1 140px" />' +
                         '<input is="emby-input" data-field="SavePath" data-index="' + i + '" placeholder="/downloads/..." value="' + escapeAttr(p.SavePath) + '" style="flex:2 1 220px" />' +
+                        '<select is="emby-select" data-field="JellyfinLibraryId" data-index="' + i + '" aria-label="Jellyfin library to scan" style="flex:1 1 160px">' +
+                        '<option value="">All libraries</option>' +
+                        libraries.map(function (l) {
+                            return '<option value="' + escapeAttr(l.ItemId) + '"' + (l.ItemId === p.JellyfinLibraryId ? ' selected' : '') + '>' + escapeAttr(l.Name) + '</option>';
+                        }).join('') +
+                        '</select>' +
                         '<button is="paper-icon-button-light" type="button" data-remove="' + i + '" title="Remove profile" aria-label="Remove profile"><span class="material-icons delete" aria-hidden="true"></span></button>' +
                         '</div>';
                 }).join('');
 
                 list.querySelectorAll('[data-field]').forEach(function (input) {
-                    input.addEventListener('input', function () {
+                    function update() {
                         profiles[parseInt(input.getAttribute('data-index'), 10)][input.getAttribute('data-field')] = input.value;
-                    });
+                    }
+                    input.addEventListener('input', update);
+                    input.addEventListener('change', update);
                 });
 
                 list.querySelectorAll('[data-remove]').forEach(function (button) {
@@ -133,14 +148,19 @@
             document.querySelector('#AuthenticationMode').addEventListener('change', syncAuthFields);
 
             document.querySelector('#AddProfileButton').addEventListener('click', function () {
-                profiles.push({ Name: '', Category: '', SavePath: '' });
+                profiles.push({ Name: '', Category: '', SavePath: '', JellyfinLibraryId: '' });
                 renderProfiles();
             });
 
             document.querySelector('#QBittorrentConfigPage')
                 .addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();
-                    ApiClient.getPluginConfiguration(QBittorrentConfig.pluginUniqueId).then(function (config) {
+                    Promise.all([
+                        ApiClient.getPluginConfiguration(QBittorrentConfig.pluginUniqueId),
+                        ApiClient.getVirtualFolders().catch(function () { return []; })
+                    ]).then(function (results) {
+                        var config = results[0];
+                        libraries = results[1] || [];
                         document.querySelector('#QBittorrentUrl').value = config.QBittorrentUrl;
                         document.querySelector('#AuthenticationMode').value = config.AuthenticationMode;
                         syncAuthFields();
@@ -148,6 +168,7 @@
                         document.querySelector('#EnableDashboardWidget').checked = config.EnableDashboardWidget;
                         document.querySelector('#RefreshIntervalSeconds').value = config.RefreshIntervalSeconds;
                         document.querySelector('#EnableCompletionMonitoring').checked = config.EnableCompletionMonitoring;
+                        document.querySelector('#CompletionPollIntervalSeconds').value = config.CompletionPollIntervalSeconds;
                         document.querySelector('#ScanLibraryOnCompletion').checked = config.ScanLibraryOnCompletion;
                         profiles = config.Profiles || [];
                         renderProfiles();
@@ -165,6 +186,7 @@
                         config.EnableDashboardWidget = document.querySelector('#EnableDashboardWidget').checked;
                         config.RefreshIntervalSeconds = parseInt(document.querySelector('#RefreshIntervalSeconds').value, 10);
                         config.EnableCompletionMonitoring = document.querySelector('#EnableCompletionMonitoring').checked;
+                        config.CompletionPollIntervalSeconds = Math.max(5, parseInt(document.querySelector('#CompletionPollIntervalSeconds').value, 10) || 30);
                         config.ScanLibraryOnCompletion = document.querySelector('#ScanLibraryOnCompletion').checked;
                         config.Profiles = profiles.filter(function (p) { return p.Name; });
 

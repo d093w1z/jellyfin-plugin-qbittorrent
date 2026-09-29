@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.QBittorrent.Integration;
 using Jellyfin.Plugin.QBittorrent.QBittorrent;
 using Jellyfin.Plugin.QBittorrent.QBittorrent.Authentication;
 using MediaBrowser.Controller;
@@ -35,6 +36,9 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<IQBittorrentClient, QBittorrentClient>();
 
         serviceCollection.AddSingleton<Func<PluginConfiguration>>(_ => GetConfiguration);
+
+        serviceCollection.AddSingleton<IJellyfinLibraryService, JellyfinLibraryService>();
+        serviceCollection.AddHostedService<TorrentCompletionMonitor>();
     }
 
     private static PluginConfiguration GetConfiguration() => Plugin.Instance!.Configuration;

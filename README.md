@@ -31,6 +31,20 @@ for these). The plugin doesn't ship or manage search plugins itself. **Add**
 on a result opens the usual add dialog with its link filled in, so profiles,
 category and save path work the same way as for any other torrent.
 
+## Library scans on completion
+
+With **Monitor torrents for completion** enabled, the server checks
+qBittorrent every *Completion check interval* seconds (default 30) and notices
+when a torrent finishes (fully downloaded and no longer moving or checking).
+Torrents already complete when monitoring starts are ignored.
+
+With **Scan Jellyfin library when a torrent completes** also enabled, each
+download profile can name a Jellyfin library: a finished torrent whose
+category matches the profile scans just that library. If a finished torrent
+matches no profile with a library, Jellyfin's regular *Scan Media Library*
+task is queued instead. Several torrents finishing together trigger each
+scan once.
+
 ## Build
 
 Requires the .NET 10 SDK on Linux.

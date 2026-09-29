@@ -234,4 +234,36 @@ public class ControllerTests
         var job = Assert.IsType<OkObjectResult>(started.Result).Value as SearchController.SearchJob;
         Assert.Equal(42, job!.Id);
     }
+
+    [Fact]
+    public async Task AdvancedEndpoints_RejectInvalidInput()
+    {
+        var mock = new Mock<IQBittorrentClient>();
+        var torrents = CreateController<TorrentController>(mock.Object);
+        var transfer = CreateController<TransferController>(mock.Object);
+
+        var badTag = await torrents.SetTags("h", new TorrentController.SetTagsBody { Tags = ["a,b"] }, CancellationToken.None);
+        var badPriority = await torrents.SetFilePriority("h", new TorrentController.FilePriorityBody { Files = [0], Priority = 3 }, CancellationToken.None);
+        var noFiles = await torrents.SetFilePriority("h", new TorrentController.FilePriorityBody { Files = [], Priority = 1 }, CancellationToken.None);
+        var badLimit = await transfer.SetLimits(new TransferController.SpeedLimitsBody { DownloadLimit = -1 }, CancellationToken.None);
+
+        Assert.All([badTag, badPriority, noFiles, badLimit], r => Assert.IsType<BadRequestObjectResult>(r));
+        mock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SetTags_TrimsAndDeduplicates()
+    {
+        var mock = new Mock<IQBittorrentClient>();
+        IEnumerable<string>? sent = null;
+        mock.Setup(c => c.SetTagsAsync("h", It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, IEnumerable<string>, CancellationToken>((_, tags, _) => sent = tags)
+            .Returns(Task.CompletedTask);
+        var torrents = CreateController<TorrentController>(mock.Object);
+
+        var result = await torrents.SetTags("h", new TorrentController.SetTagsBody { Tags = [" hd ", "HD", "", "movies"] }, CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Equal(["hd", "movies"], sent);
+    }
 }

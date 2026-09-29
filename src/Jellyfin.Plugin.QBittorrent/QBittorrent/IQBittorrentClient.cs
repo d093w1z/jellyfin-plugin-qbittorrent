@@ -113,6 +113,27 @@ public interface IQBittorrentClient
     Task SetCategoryAsync(IEnumerable<string> hashes, string category, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Replaces a torrent's tags. Tags that don't exist yet are created.
+    /// </summary>
+    Task SetTagsAsync(string hash, IEnumerable<string> tags, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the download priority of files within a torrent:
+    /// 0 = do not download, 1 = normal, 6 = high, 7 = maximum.
+    /// </summary>
+    Task SetFilePriorityAsync(string hash, IEnumerable<int> fileIndexes, int priority, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the global download/upload limits in bytes per second; 0 means unlimited.
+    /// </summary>
+    Task SetSpeedLimitsAsync(long downloadLimit, long uploadLimit, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Switches qBittorrent's alternative speed limits on or off.
+    /// </summary>
+    Task ToggleAlternativeSpeedLimitsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Verifies connectivity and authentication against the configured qBittorrent
     /// instance. Throws <see cref="QBittorrentApiException"/> on failure.
     /// </summary>

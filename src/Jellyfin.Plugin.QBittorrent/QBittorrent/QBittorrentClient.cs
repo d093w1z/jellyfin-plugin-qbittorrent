@@ -8,6 +8,12 @@ namespace Jellyfin.Plugin.QBittorrent.QBittorrent;
 public sealed class QBittorrentClient : IQBittorrentClient
 {
     private readonly QBittorrentConnection _connection;
+    private readonly MainDataCache _mainData = new();
+
+    /// <summary>
+    /// Gets the sync cache; exposed for tests.
+    /// </summary>
+    internal MainDataCache MainData => _mainData;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QBittorrentClient"/> class.
@@ -20,7 +26,7 @@ public sealed class QBittorrentClient : IQBittorrentClient
     /// <inheritdoc />
     public async Task<TransferInfo> GetTransferInfoAsync(CancellationToken cancellationToken)
     {
-        var wire = await _connection.GetJsonAsync<WireTransferInfo>("/api/v2/transfer/info", query: null, cancellationToken).ConfigureAwait(false);
+        var wire = await _mainData.GetServerStateAsync(_connection, cancellationToken).ConfigureAwait(false);
         return new TransferInfo
         {
             DownloadSpeed = wire.DlInfoSpeed,
@@ -30,23 +36,26 @@ public sealed class QBittorrentClient : IQBittorrentClient
             DhtNodes = wire.DhtNodes,
             ConnectionStatus = wire.ConnectionStatus,
             DownloadSpeedLimit = wire.DlRateLimit,
-            UploadSpeedLimit = wire.UpRateLimit
+            UploadSpeedLimit = wire.UpRateLimit,
+            AlternativeSpeedLimitsEnabled = wire.UseAltSpeedLimits
         };
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<TorrentInfo>> GetTorrentsAsync(TorrentFilter? filter, CancellationToken cancellationToken)
     {
-        var query = new Dictionary<string, string?>
-        {
-            ["category"] = filter?.Category,
-            ["tag"] = filter?.Tag,
-            ["sort"] = filter?.Sort,
-            ["reverse"] = filter?.Reverse is true ? "true" : null
-        };
+        var wireTorrents = await _mainData.GetTorrentsAsync(_connection, filter?.Sort, filter?.Reverse is true, cancellationToken).ConfigureAwait(false);
+        var torrents = wireTorrents.Select(MapTorrent);
 
-        var wireTorrents = await _connection.GetJsonAsync<List<WireTorrent>>("/api/v2/torrents/info", query, cancellationToken).ConfigureAwait(false);
-        var torrents = wireTorrents.Select(MapTorrent).AsEnumerable();
+        if (filter?.Category is not null)
+        {
+            torrents = torrents.Where(t => string.Equals(t.Category, filter.Category, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrEmpty(filter?.Tag))
+        {
+            torrents = torrents.Where(t => t.Tags.Contains(filter.Tag, StringComparer.OrdinalIgnoreCase));
+        }
 
         if (!string.IsNullOrEmpty(filter?.State))
         {
@@ -64,9 +73,9 @@ public sealed class QBittorrentClient : IQBittorrentClient
     /// <inheritdoc />
     public async Task<TorrentInfo?> GetTorrentAsync(string hash, CancellationToken cancellationToken)
     {
-        var query = new Dictionary<string, string?> { ["hashes"] = hash };
-        var wireTorrents = await _connection.GetJsonAsync<List<WireTorrent>>("/api/v2/torrents/info", query, cancellationToken).ConfigureAwait(false);
-        return wireTorrents.Count > 0 ? MapTorrent(wireTorrents[0]) : null;
+        var wireTorrents = await _mainData.GetTorrentsAsync(_connection, sortField: null, reverse: false, cancellationToken).ConfigureAwait(false);
+        var wire = wireTorrents.Find(t => string.Equals(t.Hash, hash, StringComparison.OrdinalIgnoreCase));
+        return wire is null ? null : MapTorrent(wire);
     }
 
     /// <inheritdoc />
@@ -153,22 +162,23 @@ public sealed class QBittorrentClient : IQBittorrentClient
         content.Add(new StringContent(request.StartImmediately ? "false" : "true"), "paused");
 
         await _connection.PostAsync("/api/v2/torrents/add", content, cancellationToken).ConfigureAwait(false);
+        _mainData.Invalidate();
     }
 
     /// <inheritdoc />
     public Task PauseAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
-        => _connection.PostFormAsync("/api/v2/torrents/stop", HashesForm(hashes), cancellationToken);
+        => PostFormAsync("/api/v2/torrents/stop", HashesForm(hashes), cancellationToken);
 
     /// <inheritdoc />
     public Task ResumeAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
-        => _connection.PostFormAsync("/api/v2/torrents/start", HashesForm(hashes), cancellationToken);
+        => PostFormAsync("/api/v2/torrents/start", HashesForm(hashes), cancellationToken);
 
     /// <inheritdoc />
     public Task ForceResumeAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
     {
         var form = HashesForm(hashes);
         form["value"] = "true";
-        return _connection.PostFormAsync("/api/v2/torrents/setForceStart", form, cancellationToken);
+        return PostFormAsync("/api/v2/torrents/setForceStart", form, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -176,16 +186,16 @@ public sealed class QBittorrentClient : IQBittorrentClient
     {
         var form = HashesForm(hashes);
         form["deleteFiles"] = deleteFiles ? "true" : "false";
-        return _connection.PostFormAsync("/api/v2/torrents/delete", form, cancellationToken);
+        return PostFormAsync("/api/v2/torrents/delete", form, cancellationToken);
     }
 
     /// <inheritdoc />
     public Task RecheckAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
-        => _connection.PostFormAsync("/api/v2/torrents/recheck", HashesForm(hashes), cancellationToken);
+        => PostFormAsync("/api/v2/torrents/recheck", HashesForm(hashes), cancellationToken);
 
     /// <inheritdoc />
     public Task ReannounceAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
-        => _connection.PostFormAsync("/api/v2/torrents/reannounce", HashesForm(hashes), cancellationToken);
+        => PostFormAsync("/api/v2/torrents/reannounce", HashesForm(hashes), cancellationToken);
 
     /// <inheritdoc />
     public async Task<int> StartSearchAsync(string pattern, CancellationToken cancellationToken)
@@ -221,7 +231,7 @@ public sealed class QBittorrentClient : IQBittorrentClient
     public Task DeleteSearchAsync(int searchId, CancellationToken cancellationToken)
     {
         var form = new Dictionary<string, string> { ["id"] = searchId.ToString(CultureInfo.InvariantCulture) };
-        return _connection.PostFormAsync("/api/v2/search/delete", form, cancellationToken);
+        return PostFormAsync("/api/v2/search/delete", form, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -250,8 +260,45 @@ public sealed class QBittorrentClient : IQBittorrentClient
     {
         var form = HashesForm(hashes);
         form["category"] = category;
-        return _connection.PostFormAsync("/api/v2/torrents/setCategory", form, cancellationToken);
+        return PostFormAsync("/api/v2/torrents/setCategory", form, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task SetTagsAsync(string hash, IEnumerable<string> tags, CancellationToken cancellationToken)
+    {
+        // removeTags without a tag list clears them all; addTags creates tags that don't exist yet.
+        await PostFormAsync("/api/v2/torrents/removeTags", HashesForm([hash]), cancellationToken).ConfigureAwait(false);
+        var tagList = string.Join(',', tags);
+        if (tagList.Length > 0)
+        {
+            var form = HashesForm([hash]);
+            form["tags"] = tagList;
+            await PostFormAsync("/api/v2/torrents/addTags", form, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task SetFilePriorityAsync(string hash, IEnumerable<int> fileIndexes, int priority, CancellationToken cancellationToken)
+    {
+        var form = new Dictionary<string, string>
+        {
+            ["hash"] = hash,
+            ["id"] = string.Join('|', fileIndexes.Select(i => i.ToString(CultureInfo.InvariantCulture))),
+            ["priority"] = priority.ToString(CultureInfo.InvariantCulture)
+        };
+        return PostFormAsync("/api/v2/torrents/filePrio", form, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task SetSpeedLimitsAsync(long downloadLimit, long uploadLimit, CancellationToken cancellationToken)
+    {
+        await PostFormAsync("/api/v2/transfer/setDownloadLimit", new() { ["limit"] = downloadLimit.ToString(CultureInfo.InvariantCulture) }, cancellationToken).ConfigureAwait(false);
+        await PostFormAsync("/api/v2/transfer/setUploadLimit", new() { ["limit"] = uploadLimit.ToString(CultureInfo.InvariantCulture) }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task ToggleAlternativeSpeedLimitsAsync(CancellationToken cancellationToken)
+        => PostFormAsync("/api/v2/transfer/toggleSpeedLimitsMode", new(), cancellationToken);
 
     /// <inheritdoc />
     public async Task TestConnectionAsync(CancellationToken cancellationToken)
@@ -262,6 +309,13 @@ public sealed class QBittorrentClient : IQBittorrentClient
     /// <inheritdoc />
     public Task<string> GetVersionAsync(CancellationToken cancellationToken)
         => _connection.GetStringAsync("/api/v2/app/version", cancellationToken);
+
+    // Every change goes through here so the next read re-syncs and shows it immediately.
+    private async Task PostFormAsync(string endpoint, Dictionary<string, string> form, CancellationToken cancellationToken)
+    {
+        await _connection.PostFormAsync(endpoint, form, cancellationToken).ConfigureAwait(false);
+        _mainData.Invalidate();
+    }
 
     private static Dictionary<string, string> HashesForm(IEnumerable<string> hashes)
         => new() { ["hashes"] = string.Join('|', hashes) };
@@ -285,6 +339,7 @@ public sealed class QBittorrentClient : IQBittorrentClient
             State = TorrentStateNormalizer.Normalize(wire.State),
             RawState = wire.State,
             Category = wire.Category,
+            Tags = wire.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             SavePath = wire.SavePath,
             AddedOn = wire.AddedOn > 0 ? DateTimeOffset.FromUnixTimeSeconds(wire.AddedOn) : null
         };

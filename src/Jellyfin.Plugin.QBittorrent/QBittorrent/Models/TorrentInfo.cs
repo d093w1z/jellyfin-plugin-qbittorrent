@@ -93,4 +93,9 @@ public sealed class TorrentInfo
     /// Gets the date the torrent was added, if known.
     /// </summary>
     public DateTimeOffset? AddedOn { get; init; }
+
+    /// <summary>
+    /// Gets the torrent's tags.
+    /// </summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
 }

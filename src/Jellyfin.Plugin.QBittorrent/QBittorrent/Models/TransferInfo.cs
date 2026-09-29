@@ -44,4 +44,10 @@ public sealed class TransferInfo
     /// Gets the global upload speed limit, in bytes/second (0 = unlimited).
     /// </summary>
     public long UploadSpeedLimit { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether qBittorrent's alternative speed limits are active;
+    /// when they are, the limits above are the alternative ones.
+    /// </summary>
+    public bool AlternativeSpeedLimitsEnabled { get; init; }
 }

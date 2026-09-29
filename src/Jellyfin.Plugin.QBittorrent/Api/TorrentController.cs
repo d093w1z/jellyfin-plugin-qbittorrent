@@ -91,6 +91,35 @@ public sealed class TorrentController : QBittorrentControllerBase
         return await ExecuteAsync(() => _client.AddTorrentAsync(request, cancellationToken));
     }
 
+    /// <summary>
+    /// Replaces a torrent's tags.
+    /// </summary>
+    [HttpPut("{hash}/tags")]
+    public async Task<ActionResult> SetTags(string hash, [FromBody] SetTagsBody body, CancellationToken cancellationToken)
+    {
+        var tags = (body?.Tags ?? []).Select(t => t?.Trim() ?? string.Empty).Where(t => t.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (tags.Any(t => t.Contains(',', StringComparison.Ordinal)))
+        {
+            return BadRequest("Tags cannot contain commas.");
+        }
+
+        return await ExecuteAsync(() => _client.SetTagsAsync(hash, tags, cancellationToken)).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sets the priority of files within a torrent: 0 = skip, 1 = normal, 6 = high, 7 = maximum.
+    /// </summary>
+    [HttpPost("{hash}/files/priority")]
+    public async Task<ActionResult> SetFilePriority(string hash, [FromBody] FilePriorityBody body, CancellationToken cancellationToken)
+    {
+        if (body?.Files is not { Count: > 0 } files || files.Any(i => i < 0) || body.Priority is not (0 or 1 or 6 or 7))
+        {
+            return BadRequest("files must be a non-empty list of file indexes and priority one of 0, 1, 6, 7.");
+        }
+
+        return await ExecuteAsync(() => _client.SetFilePriorityAsync(hash, files, body.Priority, cancellationToken)).ConfigureAwait(false);
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
 
     private sealed class AddTorrentBody
@@ -219,4 +248,31 @@ public sealed class TorrentController : QBittorrentControllerBase
     [HttpDelete("{hash}")]
     public Task<ActionResult> Delete(string hash, [FromQuery] bool deleteFiles, CancellationToken cancellationToken)
         => ExecuteAsync(() => _client.DeleteAsync([hash], deleteFiles, cancellationToken));
+
+    /// <summary>
+    /// Request body for <see cref="SetTags"/>.
+    /// </summary>
+    public sealed class SetTagsBody
+    {
+        /// <summary>
+        /// Gets or sets the complete list of tags the torrent should have.
+        /// </summary>
+        public List<string>? Tags { get; set; }
+    }
+
+    /// <summary>
+    /// Request body for <see cref="SetFilePriority"/>.
+    /// </summary>
+    public sealed class FilePriorityBody
+    {
+        /// <summary>
+        /// Gets or sets the indexes of the files to change.
+        /// </summary>
+        public List<int>? Files { get; set; }
+
+        /// <summary>
+        /// Gets or sets the priority: 0 = skip, 1 = normal, 6 = high, 7 = maximum.
+        /// </summary>
+        public int Priority { get; set; }
+    }
 }

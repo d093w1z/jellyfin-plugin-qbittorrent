@@ -49,6 +49,9 @@ internal sealed class WireTorrent
     [JsonPropertyName("category")]
     public string Category { get; set; } = string.Empty;
 
+    [JsonPropertyName("tags")]
+    public string Tags { get; set; } = string.Empty;
+
     [JsonPropertyName("save_path")]
     public string SavePath { get; set; } = string.Empty;
 
@@ -144,6 +147,9 @@ internal sealed class WireTransferInfo
 
     [JsonPropertyName("up_rate_limit")]
     public long UpRateLimit { get; set; }
+
+    [JsonPropertyName("use_alt_speed_limits")]
+    public bool UseAltSpeedLimits { get; set; }
 }
 
 internal sealed class WireCategoryEntry

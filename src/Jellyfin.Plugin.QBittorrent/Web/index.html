@@ -50,6 +50,13 @@
             #QBittorrentPage .qbt-stat + .qbt-stat { border-left: 1px solid var(--qbt-border); }
             #QBittorrentPage .qbt-stat-label { font-size: 12px; color: var(--qbt-muted); margin-bottom: 0.3rem; }
             #QBittorrentPage .qbt-stat-value { font-size: 1.35rem; font-weight: 500; letter-spacing: -0.01em; }
+            #QBittorrentPage .qbt-stat-sub { font-size: 11px; color: var(--qbt-muted); margin-top: 0.15rem; }
+            #QBittorrentPage .qbt-btn.is-active { border-color: var(--qbt-amber); color: var(--qbt-amber); }
+            #QBittorrentPage .qbt-tag { display: inline-block; padding: 0 0.4rem; border-radius: 4px; background: var(--qbt-hover); font-size: 11px; line-height: 1.5; }
+            #QBittorrentPage .qbt-tags-edit { display: flex; gap: 0.5rem; align-items: center; padding: 0.6rem 0 0.1rem; font-size: 13px; }
+            #QBittorrentPage .qbt-tags-edit .qbt-input { height: 1.9rem; max-width: 360px; }
+            #QBittorrentPage .qbt-table select.qbt-input { height: 1.6rem; width: auto; padding: 0 0.3rem; font-size: 12px; appearance: auto; }
+            #QBittorrentPage .qbt-hint { font-size: 12px; color: var(--qbt-muted); margin: -0.4rem 0 1rem; }
 
             /* toolbar */
             #QBittorrentPage .qbt-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
@@ -180,6 +187,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                         <span>Settings</span>
                     </a>
+                    <button id="QbtLimitsButton" type="button" class="qbt-btn" title="Speed limits">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+                        <span>Limits</span>
+                    </button>
                     <button id="QbtAddButton" type="button" class="qbt-btn qbt-btn-primary">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                         <span>Add torrent</span>
@@ -187,8 +198,8 @@
                 </header>
 
                 <section class="qbt-stats" aria-label="Transfer summary">
-                    <div class="qbt-stat"><div class="qbt-stat-label">Download</div><div id="QbtDlValue" class="qbt-stat-value num">—</div></div>
-                    <div class="qbt-stat"><div class="qbt-stat-label">Upload</div><div id="QbtUpValue" class="qbt-stat-value num">—</div></div>
+                    <div class="qbt-stat"><div class="qbt-stat-label">Download</div><div id="QbtDlValue" class="qbt-stat-value num">—</div><div id="QbtDlLimit" class="qbt-stat-sub num"></div></div>
+                    <div class="qbt-stat"><div class="qbt-stat-label">Upload</div><div id="QbtUpValue" class="qbt-stat-value num">—</div><div id="QbtUpLimit" class="qbt-stat-sub num"></div></div>
                     <div class="qbt-stat"><div class="qbt-stat-label">Downloading</div><div id="QbtDownloadingCount" class="qbt-stat-value num">—</div></div>
                     <div class="qbt-stat"><div class="qbt-stat-label">Seeding</div><div id="QbtSeedingCount" class="qbt-stat-value num">—</div></div>
                 </section>
@@ -229,6 +240,29 @@
                 </div>
 
                 <div id="QbtToast" class="qbt-toast" role="status" aria-live="polite"></div>
+
+                <dialog id="QbtLimitsDialog" class="qbt-dialog" aria-labelledby="QbtLimitsTitle">
+                    <form id="QbtLimitsForm" method="dialog">
+                        <h2 id="QbtLimitsTitle">Speed limits</h2>
+                        <div class="qbt-row2">
+                            <div class="qbt-field">
+                                <label for="QbtLimitDown">Download (KiB/s)</label>
+                                <input id="QbtLimitDown" class="qbt-input" type="number" min="0" step="1" placeholder="0 = unlimited" />
+                            </div>
+                            <div class="qbt-field">
+                                <label for="QbtLimitUp">Upload (KiB/s)</label>
+                                <input id="QbtLimitUp" class="qbt-input" type="number" min="0" step="1" placeholder="0 = unlimited" />
+                            </div>
+                        </div>
+                        <p id="QbtLimitsHint" class="qbt-hint">0 means unlimited.</p>
+                        <label class="qbt-check"><input id="QbtAltLimits" type="checkbox" /> Use alternative speed limits</label>
+                        <div id="QbtLimitsError" class="qbt-error" role="alert"></div>
+                        <div class="qbt-dialog-footer">
+                            <button type="button" id="QbtLimitsCancel" class="qbt-btn">Cancel</button>
+                            <button type="submit" class="qbt-btn qbt-btn-primary">Save</button>
+                        </div>
+                    </form>
+                </dialog>
 
                 <dialog id="QbtAddDialog" class="qbt-dialog" aria-labelledby="QbtAddTitle">
                     <form id="QbtAddForm" method="dialog">
@@ -337,6 +371,9 @@
 
                 function apiPost(path) { return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('api/' + path) }); }
                 function apiDelete(path) { return ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl('api/' + path) }); }
+                function apiJson(type, path, body) {
+                    return ApiClient.ajax({ type: type, url: ApiClient.getUrl('api/' + path), data: JSON.stringify(body), contentType: 'application/json' });
+                }
 
                 var toastTimer = null;
                 function toast(message) {
@@ -351,8 +388,13 @@
 
                 function refreshTransfer() {
                     ajax('qbittorrent/transfer').then(function (t) {
+                        state.transfer = t;
+                        var prefix = t.AlternativeSpeedLimitsEnabled ? 'Alt limit ' : 'Limit ';
                         page.querySelector('#QbtDlValue').textContent = formatSpeed(t.DownloadSpeed);
                         page.querySelector('#QbtUpValue').textContent = formatSpeed(t.UploadSpeed);
+                        page.querySelector('#QbtDlLimit').textContent = t.DownloadSpeedLimit > 0 ? prefix + formatSpeed(t.DownloadSpeedLimit) : 'No limit';
+                        page.querySelector('#QbtUpLimit').textContent = t.UploadSpeedLimit > 0 ? prefix + formatSpeed(t.UploadSpeedLimit) : 'No limit';
+                        page.querySelector('#QbtLimitsButton').classList.toggle('is-active', !!t.AlternativeSpeedLimitsEnabled);
                     }, function () {
                         page.querySelector('#QbtDlValue').textContent = '—';
                         page.querySelector('#QbtUpValue').textContent = '—';
@@ -399,6 +441,8 @@
                     ajax('qbittorrent/torrents?' + query).then(function (result) {
                         state.torrents = result.Items || [];
                         renderCounts();
+                        var detail = page.querySelector('#QbtDetail');
+                        if (detail && detail.contains(document.activeElement)) { return; }
                         renderList();
                     }, function () {
                         page.querySelector('#QbtList').innerHTML =
@@ -441,7 +485,8 @@
                         '    <div style="min-width:0">' +
                         '      <div class="qbt-name" title="' + escapeHtml(t.Name) + '">' + escapeHtml(t.Name) + '</div>' +
                         '      <div class="qbt-meta"><span class="qbt-status">' + escapeHtml(t.State) + '</span><span>·</span>' +
-                        '        <span class="num">' + formatBytes(t.Size) + '</span><span>·</span><span>' + escapeHtml(t.Category || 'Uncategorized') + '</span></div>' +
+                        '        <span class="num">' + formatBytes(t.Size) + '</span><span>·</span><span>' + escapeHtml(t.Category || 'Uncategorized') + '</span>' +
+                        (t.Tags || []).map(function (tag) { return '<span class="qbt-tag">' + escapeHtml(tag) + '</span>'; }).join('') + '</div>' +
                         '    </div>' +
                         '    <div class="qbt-progress"><div class="qbt-bar"><span style="width:' + progressPct + '%"></span></div><span class="num" style="min-width:3ch;text-align:right">' + progressPct + '%</span></div>' +
                         '    <div class="qbt-speeds num"><span>&#8595; ' + formatSpeed(t.DownloadSpeed) + '</span><span class="muted">&#8593; ' + formatSpeed(t.UploadSpeed) + '</span></div>' +
@@ -509,6 +554,12 @@
                     });
                 }
 
+                function torrentByHash(hash) {
+                    return state.torrents.find(function (t) { return t.Hash === hash; });
+                }
+
+                var PRIORITIES = [[0, 'Skip'], [1, 'Normal'], [6, 'High'], [7, 'Maximum']];
+
                 function renderDetail(hash) {
                     var container = page.querySelector('#QbtDetail');
                     if (!container) { return; }
@@ -535,7 +586,28 @@
                         }).join('') +
                         '  </div>' +
                         '</div>' +
+                        '<form class="qbt-tags-edit" data-tags-form><label class="muted" for="QbtTagsInput">Tags</label>' +
+                        '  <input id="QbtTagsInput" class="qbt-input" type="text" placeholder="Comma-separated, e.g. 4k, family" value="' + escapeHtml((torrentByHash(hash) || {}).Tags ? torrentByHash(hash).Tags.join(', ') : '') + '" />' +
+                        '  <button type="submit" class="qbt-btn qbt-btn-sm">Save tags</button></form>' +
                         '<div id="QbtDetailBody">' + (state.detailCache[cacheKey] || '<div class="qbt-detail-msg">Loading…</div>') + '</div>';
+
+                    container.querySelector('[data-tags-form]').addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        var tags = container.querySelector('#QbtTagsInput').value.split(',')
+                            .map(function (t) { return t.trim(); }).filter(function (t) { return t; });
+                        apiJson('PUT', 'qbittorrent/torrents/' + hash + '/tags', { Tags: tags }).then(function () {
+                            toast('Tags saved');
+                            document.activeElement.blur();
+                            refreshTorrents();
+                        }, function () { toast('Could not save tags.'); });
+                    });
+
+                    container.querySelector('#QbtDetailBody').addEventListener('change', function (e) {
+                        var select = e.target.closest('[data-file]');
+                        if (!select) { return; }
+                        apiJson('POST', 'qbittorrent/torrents/' + hash + '/files/priority', { Files: [parseInt(select.getAttribute('data-file'), 10)], Priority: parseInt(select.value, 10) })
+                            .then(function () { select.blur(); }, function () { toast('Could not change file priority.'); });
+                    });
 
                     container.querySelectorAll('[data-tab]').forEach(function (button) {
                         button.addEventListener('click', function () {
@@ -565,7 +637,7 @@
                         headers.map(function (h) { return '<th class="' + (h[1] || '') + '" style="' + (h[2] ? 'width:' + h[2] : '') + '">' + h[0] + '</th>'; }).join('') +
                         '</tr></thead><tbody>' +
                         rows.map(function (r) {
-                            return '<tr>' + r.map(function (c, i) { return '<td class="' + (headers[i][1] || '') + '" title="' + c.replace(/<[^>]*>/g, '') + '">' + c + '</td>'; }).join('') + '</tr>';
+                            return '<tr>' + r.map(function (c, i) { return '<td class="' + (headers[i][1] || '') + '"' + (/<select/.test(c) ? '' : ' title="' + c.replace(/<[^>]*>/g, '') + '"') + '>' + c + '</td>'; }).join('') + '</tr>';
                         }).join('') +
                         '</tbody></table>';
                 }
@@ -576,8 +648,12 @@
                     }
 
                     if (tab === 'files') {
-                        return table([['Name'], ['Size', 'r num', '90px'], ['Progress', 'r num', '80px']], items.map(function (f) {
-                            return [escapeHtml(f.Name), formatBytes(f.Size), Math.round((f.Progress || 0) * 100) + '%'];
+                        return table([['Name'], ['Size', 'r num', '90px'], ['Progress', 'r num', '80px'], ['Priority', 'r', '110px']], items.map(function (f) {
+                            var select = '<select class="qbt-input" data-file="' + f.Index + '" aria-label="Priority">' +
+                                PRIORITIES.map(function (p) {
+                                    return '<option value="' + p[0] + '"' + (p[0] === f.Priority ? ' selected' : '') + '>' + p[1] + '</option>';
+                                }).join('') + '</select>';
+                            return [escapeHtml(f.Name), formatBytes(f.Size), Math.round((f.Progress || 0) * 100) + '%', select];
                         }));
                     }
 
@@ -767,6 +843,70 @@
                 });
 
                 page.addEventListener('pagehide', stopWebSearch);
+
+                // --- speed limits ----------------------------------------------------------
+
+                var limitsDialog = page.querySelector('#QbtLimitsDialog');
+
+                function syncLimitInputs() {
+                    // qBittorrent reports the active limits, so while alternative limits are on the
+                    // normal ones aren't known here; editing them then would overwrite them blindly.
+                    var alt = page.querySelector('#QbtAltLimits').checked;
+                    page.querySelector('#QbtLimitDown').disabled = alt;
+                    page.querySelector('#QbtLimitUp').disabled = alt;
+                    page.querySelector('#QbtLimitsHint').textContent = alt
+                        ? 'Alternative limits are set in qBittorrent. Turn them off to edit the normal limits.'
+                        : '0 means unlimited. Leave both blank to keep the current limits.';
+                }
+
+                page.querySelector('#QbtLimitsButton').addEventListener('click', function () {
+                    var t = state.transfer || {};
+                    page.querySelector('#QbtAltLimits').checked = !!t.AlternativeSpeedLimitsEnabled;
+                    page.querySelector('#QbtLimitDown').value = t.AlternativeSpeedLimitsEnabled ? '' : Math.round((t.DownloadSpeedLimit || 0) / 1024);
+                    page.querySelector('#QbtLimitUp').value = t.AlternativeSpeedLimitsEnabled ? '' : Math.round((t.UploadSpeedLimit || 0) / 1024);
+                    page.querySelector('#QbtLimitsError').textContent = '';
+                    syncLimitInputs();
+                    limitsDialog.showModal();
+                });
+
+                page.querySelector('#QbtAltLimits').addEventListener('change', syncLimitInputs);
+                page.querySelector('#QbtLimitsCancel').addEventListener('click', function () { limitsDialog.close(); });
+                limitsDialog.addEventListener('click', function (e) {
+                    if (e.target === limitsDialog) { limitsDialog.close(); }
+                });
+
+                page.querySelector('#QbtLimitsForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var wasAlt = !!(state.transfer || {}).AlternativeSpeedLimitsEnabled;
+                    var alt = page.querySelector('#QbtAltLimits').checked;
+                    var steps = [];
+
+                    if (!alt) {
+                        var downText = page.querySelector('#QbtLimitDown').value;
+                        var upText = page.querySelector('#QbtLimitUp').value;
+                        var down = parseInt(downText || '0', 10);
+                        var up = parseInt(upText || '0', 10);
+                        if (!(down >= 0) || !(up >= 0)) {
+                            page.querySelector('#QbtLimitsError').textContent = 'Limits must be 0 or more.';
+                            return;
+                        }
+                        // Turn alternative limits off first so the new limits apply to the normal ones.
+                        if (wasAlt) { steps.push(function () { return apiPost('qbittorrent/transfer/alternative-speed-limits/toggle'); }); }
+                        if (downText !== '' || upText !== '') {
+                            steps.push(function () { return apiJson('PUT', 'qbittorrent/transfer/limits', { DownloadLimit: down * 1024, UploadLimit: up * 1024 }); });
+                        }
+                    } else if (!wasAlt) {
+                        steps.push(function () { return apiPost('qbittorrent/transfer/alternative-speed-limits/toggle'); });
+                    }
+
+                    steps.reduce(function (p, step) { return p.then(step); }, Promise.resolve()).then(function () {
+                        limitsDialog.close();
+                        toast('Speed limits saved');
+                        refreshTransfer();
+                    }, function () {
+                        page.querySelector('#QbtLimitsError').textContent = 'Could not save speed limits.';
+                    });
+                });
 
                 // --- add torrent ---------------------------------------------------------
 

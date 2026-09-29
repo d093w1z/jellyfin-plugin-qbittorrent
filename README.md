@@ -31,6 +31,19 @@ for these). The plugin doesn't ship or manage search plugins itself. **Add**
 on a result opens the usual add dialog with its link filled in, so profiles,
 category and save path work the same way as for any other torrent.
 
+## Tags, file priority and speed limits
+
+* **Tags** show on each torrent; edit them from the torrent's detail panel
+  (comma-separated; new tags are created in qBittorrent automatically).
+* **File priority** (Skip / Normal / High / Maximum) is set per file in the
+  Files tab.
+* **Limits** (header button) sets the global download/upload limits and
+  switches qBittorrent's alternative speed limits on or off; the active limits
+  show under the speeds.
+
+The server keeps one mirror of qBittorrent's state via its sync API, so
+polling costs a small diff rather than the full torrent list.
+
 ## Library scans on completion
 
 With **Monitor torrents for completion** enabled, the server checks

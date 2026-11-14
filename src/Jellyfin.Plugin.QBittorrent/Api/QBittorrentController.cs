@@ -1,5 +1,6 @@
 using Jellyfin.Plugin.QBittorrent.Models;
 using Jellyfin.Plugin.QBittorrent.QBittorrent;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.QBittorrent.Api;
@@ -56,8 +57,10 @@ public sealed class QBittorrentController : QBittorrentControllerBase
 
     /// <summary>
     /// Returns the sidebar injection script served by <see cref="SidebarScriptStartupFilter"/>.
+    /// Anonymous: loaded by the browser from index.html before any auth token is available.
     /// </summary>
     [HttpGet("sidebar.js")]
+    [AllowAnonymous]
     [Produces("application/javascript")]
     public ContentResult GetSidebarScript() => Content(SidebarScript, "application/javascript");
 

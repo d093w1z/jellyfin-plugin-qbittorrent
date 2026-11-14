@@ -56,6 +56,15 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
                 EnableInMainMenu = true,
                 MenuSection = "server",
                 MenuIcon = "download"
+            },
+            new PluginPageInfo
+            {
+                Name = "qbittorrent-user",
+                DisplayName = "qBittorrent",
+                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Web.index.html", ns),
+                EnableInMainMenu = true,
+                MenuSection = "user",
+                MenuIcon = "download"
             }
         ];
     }

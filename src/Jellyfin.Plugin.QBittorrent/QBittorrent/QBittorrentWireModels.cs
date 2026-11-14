@@ -57,6 +57,12 @@ internal sealed class WireTorrent
 
     [JsonPropertyName("added_on")]
     public long AddedOn { get; set; }
+
+    [JsonPropertyName("seq_dl")]
+    public bool SeqDl { get; set; }
+
+    [JsonPropertyName("f_l_piece_prio")]
+    public bool FlPiecePrio { get; set; }
 }
 
 internal sealed class WireTorrentFile

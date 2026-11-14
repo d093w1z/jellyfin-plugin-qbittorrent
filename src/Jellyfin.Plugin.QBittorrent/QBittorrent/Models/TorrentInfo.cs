@@ -98,4 +98,14 @@ public sealed class TorrentInfo
     /// Gets the torrent's tags.
     /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether sequential download is enabled.
+    /// </summary>
+    public bool SequentialDownload { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether first/last piece priority is enabled.
+    /// </summary>
+    public bool FirstLastPiecePriority { get; init; }
 }

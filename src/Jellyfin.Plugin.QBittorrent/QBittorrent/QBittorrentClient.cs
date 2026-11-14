@@ -165,13 +165,39 @@ public sealed class QBittorrentClient : IQBittorrentClient
         _mainData.Invalidate();
     }
 
-    /// <inheritdoc />
-    public Task PauseAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
-        => PostFormAsync("/api/v2/torrents/stop", HashesForm(hashes), cancellationToken);
+    // qBittorrent 5.0 renamed pause→stop and resume→start; detect once and cache.
+    private volatile string? _pauseEndpoint;
+    private volatile string? _resumeEndpoint;
+
+    private async Task EnsureCompatEndpointsAsync(CancellationToken cancellationToken)
+    {
+        if (_pauseEndpoint is not null) return;
+        var version = await GetVersionAsync(cancellationToken).ConfigureAwait(false);
+        var isV5 = ParseMajorVersion(version) >= 5;
+        _pauseEndpoint = isV5 ? "/api/v2/torrents/stop" : "/api/v2/torrents/pause";
+        _resumeEndpoint = isV5 ? "/api/v2/torrents/start" : "/api/v2/torrents/resume";
+    }
+
+    private static int ParseMajorVersion(string version)
+    {
+        var s = version.TrimStart('v', 'V');
+        var dot = s.IndexOf('.', StringComparison.Ordinal);
+        return int.TryParse(dot > 0 ? s[..dot] : s, out var n) ? n : 5;
+    }
 
     /// <inheritdoc />
-    public Task ResumeAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
-        => PostFormAsync("/api/v2/torrents/start", HashesForm(hashes), cancellationToken);
+    public async Task PauseAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
+    {
+        await EnsureCompatEndpointsAsync(cancellationToken).ConfigureAwait(false);
+        await PostFormAsync(_pauseEndpoint!, HashesForm(hashes), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ResumeAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
+    {
+        await EnsureCompatEndpointsAsync(cancellationToken).ConfigureAwait(false);
+        await PostFormAsync(_resumeEndpoint!, HashesForm(hashes), cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     public Task ForceResumeAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)

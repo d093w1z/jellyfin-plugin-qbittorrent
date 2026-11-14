@@ -75,6 +75,16 @@ public interface IQBittorrentClient
     Task ReannounceAsync(IEnumerable<string> hashes, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Toggles sequential download on the given torrents.
+    /// </summary>
+    Task ToggleSequentialDownloadAsync(IEnumerable<string> hashes, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Toggles first/last piece priority on the given torrents.
+    /// </summary>
+    Task ToggleFirstLastPiecePriorityAsync(IEnumerable<string> hashes, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Starts a search across all of qBittorrent's enabled search plugins.
     /// Plugin installation/management is out of scope — this assumes the
     /// administrator has already installed and enabled plugins directly in qBittorrent.

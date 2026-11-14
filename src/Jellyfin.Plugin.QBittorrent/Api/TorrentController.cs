@@ -243,6 +243,20 @@ public sealed class TorrentController : QBittorrentControllerBase
         => ExecuteAsync(() => _client.ReannounceAsync([hash], cancellationToken));
 
     /// <summary>
+    /// Toggles sequential download on a torrent.
+    /// </summary>
+    [HttpPost("{hash}/sequential-download")]
+    public Task<ActionResult> ToggleSequentialDownload(string hash, CancellationToken cancellationToken)
+        => ExecuteAsync(() => _client.ToggleSequentialDownloadAsync([hash], cancellationToken));
+
+    /// <summary>
+    /// Toggles first/last piece priority on a torrent.
+    /// </summary>
+    [HttpPost("{hash}/first-last-piece")]
+    public Task<ActionResult> ToggleFirstLastPiecePriority(string hash, CancellationToken cancellationToken)
+        => ExecuteAsync(() => _client.ToggleFirstLastPiecePriorityAsync([hash], cancellationToken));
+
+    /// <summary>
     /// Deletes a torrent, optionally also deleting its downloaded files.
     /// </summary>
     [HttpDelete("{hash}")]

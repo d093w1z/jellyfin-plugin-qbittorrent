@@ -198,6 +198,14 @@ public sealed class QBittorrentClient : IQBittorrentClient
         => PostFormAsync("/api/v2/torrents/reannounce", HashesForm(hashes), cancellationToken);
 
     /// <inheritdoc />
+    public Task ToggleSequentialDownloadAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
+        => PostFormAsync("/api/v2/torrents/toggleSequentialDownload", HashesForm(hashes), cancellationToken);
+
+    /// <inheritdoc />
+    public Task ToggleFirstLastPiecePriorityAsync(IEnumerable<string> hashes, CancellationToken cancellationToken)
+        => PostFormAsync("/api/v2/torrents/toggleFirstLastPiecePrio", HashesForm(hashes), cancellationToken);
+
+    /// <inheritdoc />
     public async Task<int> StartSearchAsync(string pattern, CancellationToken cancellationToken)
     {
         var form = new Dictionary<string, string> { ["pattern"] = pattern, ["plugins"] = "enabled", ["category"] = "all" };
@@ -341,7 +349,9 @@ public sealed class QBittorrentClient : IQBittorrentClient
             Category = wire.Category,
             Tags = wire.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             SavePath = wire.SavePath,
-            AddedOn = wire.AddedOn > 0 ? DateTimeOffset.FromUnixTimeSeconds(wire.AddedOn) : null
+            AddedOn = wire.AddedOn > 0 ? DateTimeOffset.FromUnixTimeSeconds(wire.AddedOn) : null,
+            SequentialDownload = wire.SeqDl,
+            FirstLastPiecePriority = wire.FlPiecePrio
         };
     }
 

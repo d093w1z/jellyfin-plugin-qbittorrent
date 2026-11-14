@@ -46,14 +46,16 @@ public sealed class QBittorrentController : QBittorrentControllerBase
     {
         var authenticationMode = _configurationAccessor().AuthenticationMode.ToString();
 
+        var pluginVersion = Plugin.Instance?.Version?.ToString();
+
         try
         {
             var version = await _client.GetVersionAsync(cancellationToken).ConfigureAwait(false);
-            return Ok(new ConnectionStatus { Connected = true, QBittorrentVersion = version, AuthenticationMode = authenticationMode });
+            return Ok(new ConnectionStatus { Connected = true, QBittorrentVersion = version, AuthenticationMode = authenticationMode, PluginVersion = pluginVersion });
         }
         catch (QBittorrentApiException ex)
         {
-            return Ok(new ConnectionStatus { Connected = false, AuthenticationMode = authenticationMode, ErrorMessage = ex.Message });
+            return Ok(new ConnectionStatus { Connected = false, AuthenticationMode = authenticationMode, PluginVersion = pluginVersion, ErrorMessage = ex.Message });
         }
     }
 }

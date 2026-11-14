@@ -25,7 +25,8 @@
 
             /* header */
             #QBittorrentPage .qbt-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.75rem; }
-            #QBittorrentPage .qbt-header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.015em; margin: 0; margin-right: auto; }
+            #QBittorrentPage .qbt-header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.015em; margin: 0; }
+            #QBittorrentPage .qbt-header-version { font-size: 12px; margin-right: auto; align-self: center; }
 
             /* buttons */
             #QBittorrentPage .qbt-btn {
@@ -79,7 +80,9 @@
             #QBittorrentPage .qbt-search .qbt-input { padding-left: 2.1rem; }
 
             /* list */
-            #QBittorrentPage .qbt-list { border: 1px solid var(--qbt-border); border-radius: 12px; overflow: hidden; }
+            /* overflow:clip clips visually (respects border-radius) but unlike overflow:hidden does not
+               create a scroll container, so nested overflow:auto regions (detail tables) can still scroll. */
+            #QBittorrentPage .qbt-list { border: 1px solid var(--qbt-border); border-radius: 12px; overflow: clip; }
             #QBittorrentPage .qbt-list-head, #QBittorrentPage .qbt-row-head {
                 display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 64px 2rem; gap: 1.25rem; align-items: center; padding: 0 1rem;
             }
@@ -214,6 +217,7 @@
             <div class="content-primary qbt">
                 <header class="qbt-header">
                     <h1>qBittorrent</h1>
+                    <span id="QbtVersion" class="qbt-header-version muted num"></span>
                     <a class="qbt-btn" href="#/configurationpage?name=qBittorrent%20Manager" title="Settings" aria-label="Settings">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                         <span>Settings</span>
@@ -729,6 +733,14 @@
                     stopPolling();
                     refreshAll();
                     state.pollHandle = setInterval(refreshAll, REFRESH_MS);
+                    ajax('qbittorrent/status').then(function (s) {
+                        var el = page.querySelector('#QbtVersion');
+                        if (!el) { return; }
+                        var parts = [];
+                        if (s.QBittorrentVersion) { parts.push(s.QBittorrentVersion); }
+                        if (s.PluginVersion) { parts.push('plugin ' + s.PluginVersion); }
+                        el.textContent = s.Connected ? parts.join(' · ') : '';
+                    }, function () {});
                 }
 
                 function stopPolling() {

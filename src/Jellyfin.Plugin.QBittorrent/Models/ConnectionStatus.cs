@@ -22,6 +22,11 @@ public sealed class ConnectionStatus
     public required string AuthenticationMode { get; init; }
 
     /// <summary>
+    /// Gets the installed plugin version.
+    /// </summary>
+    public string? PluginVersion { get; init; }
+
+    /// <summary>
     /// Gets a safe, user-facing error message when not connected.
     /// </summary>
     public string? ErrorMessage { get; init; }

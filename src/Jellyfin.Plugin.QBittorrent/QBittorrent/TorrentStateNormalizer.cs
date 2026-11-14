@@ -18,8 +18,8 @@ public static class TorrentStateNormalizer
             "error" or "missingFiles" => "Error",
             "uploading" or "stalledUP" or "forcedUP" => "Seeding",
             "checkingUP" or "checkingDL" or "checkingResumeData" => "Checking",
-            "pausedUP" => "Completed",
-            "pausedDL" => "Paused",
+            "pausedUP" or "stoppedUP" => "Completed",
+            "pausedDL" or "stoppedDL" => "Paused",
             "queuedUP" or "queuedDL" => "Queued",
             "allocating" or "downloading" or "metaDL" or "forcedMetaDL" or "stalledDL" or "forcedDL" or "moving" => "Downloading",
             _ => "Unknown"

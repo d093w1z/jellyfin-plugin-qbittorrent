@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "1.1.0.15",
+        "changelog": "- Bump version to 1.1.x\n- Add qBittorrent Manager entry to Jellyfin 12 avatar/profile menu\n- Add sortable columns and move size to its own column\n- Show qBittorrent and plugin version in page header; fix mobile scroll\n- Add sequential download, F/L piece priority, and bulk file priority\n- Support qBittorrent 5.x: renamed states and pause/resume endpoints\n- Revamp UI for mobile and add profile menu nav entry",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/download/v1.1.0.15/qbittorrent-manager.zip",
+        "checksum": "629b67b41fb9a5ea5a92000dca970e70",
+        "timestamp": "2026-11-14T20:24:59Z"
+      },
+      {
         "version": "1.1.0.14",
         "changelog": "- Bump version to 1.1.x",
         "targetAbi": "12.0.0.0",

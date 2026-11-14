@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.1.0.10",
+        "changelog": "- Add sequential download, F/L piece priority, and bulk file priority\n- Fix play/pause display on qBittorrent 5.x\n- Revamp UI for mobile and add profile menu nav entry",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/download/v0.1.0.10/qbittorrent-manager.zip",
+        "checksum": "cdc228d530df6a00670839349b8b1e60",
+        "timestamp": "2026-11-14T19:10:25Z"
+      },
+      {
         "version": "0.1.0.9",
         "changelog": "- Add tags, file priority and speed limits to the UI\n- Use qBittorrent's sync API and add tags, file priority and speed limits",
         "targetAbi": "12.0.0.0",

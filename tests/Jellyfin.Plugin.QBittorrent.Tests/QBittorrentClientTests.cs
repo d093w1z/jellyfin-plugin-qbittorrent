@@ -86,6 +86,7 @@ public class QBittorrentClientTests
     public async Task PauseAsync_SendsPipeJoinedHashesToStopEndpoint()
     {
         var (client, handler) = CreateClient();
+        handler.OnJson("GET", "/api/v2/app/version", "v5.0.3");
         string? capturedBody = null;
         handler.OnRequest("POST", "/api/v2/torrents/stop", request =>
         {
@@ -205,6 +206,7 @@ public class QBittorrentClientTests
     public async Task MainData_ReusesFreshSync_ButChangesInvalidateIt()
     {
         var (client, handler) = CreateClient();
+        handler.OnJson("GET", "/api/v2/app/version", "v5.0.3");
         handler.OnJson("GET", "/api/v2/sync/maindata", """{ "rid": 1, "full_update": true, "torrents": {} }""");
         handler.OnJson("POST", "/api/v2/torrents/stop", "");
 

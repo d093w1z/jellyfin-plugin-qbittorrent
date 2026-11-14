@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.1.0.12",
+        "changelog": "- Add sortable columns and move size to its own column",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/d093w1z/jellyfin-plugin-qbittorrent/releases/download/v0.1.0.12/qbittorrent-manager.zip",
+        "checksum": "d43b09b11d611276966cd10303d3592b",
+        "timestamp": "2026-11-14T19:55:47Z"
+      },
+      {
         "version": "0.1.0.11",
         "changelog": "- Add qBittorrent Manager entry to Jellyfin 12 avatar/profile menu\n- Show plugin version alongside qBittorrent version; fix mobile scroll\n- Support qBittorrent < 5.0 pause/resume API names\n- Show qBittorrent version in page header",
         "targetAbi": "12.0.0.0",

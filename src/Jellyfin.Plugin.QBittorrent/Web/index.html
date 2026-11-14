@@ -80,7 +80,9 @@
             #QBittorrentPage .qbt-search .qbt-input { padding-left: 2.1rem; }
 
             /* list */
-            #QBittorrentPage .qbt-list { border: 1px solid var(--qbt-border); border-radius: 12px; overflow: hidden; }
+            /* overflow:clip clips visually (respects border-radius) but unlike overflow:hidden does not
+               create a scroll container, so nested overflow:auto regions (detail tables) can still scroll. */
+            #QBittorrentPage .qbt-list { border: 1px solid var(--qbt-border); border-radius: 12px; overflow: clip; }
             #QBittorrentPage .qbt-list-head, #QBittorrentPage .qbt-row-head {
                 display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 64px 2rem; gap: 1.25rem; align-items: center; padding: 0 1rem;
             }
@@ -733,7 +735,11 @@
                     state.pollHandle = setInterval(refreshAll, REFRESH_MS);
                     ajax('qbittorrent/status').then(function (s) {
                         var el = page.querySelector('#QbtVersion');
-                        if (el) { el.textContent = s.Connected ? s.QBittorrentVersion : ''; }
+                        if (!el) { return; }
+                        var parts = [];
+                        if (s.QBittorrentVersion) { parts.push(s.QBittorrentVersion); }
+                        if (s.PluginVersion) { parts.push('plugin ' + s.PluginVersion); }
+                        el.textContent = s.Connected ? parts.join(' · ') : '';
                     }, function () {});
                 }
 

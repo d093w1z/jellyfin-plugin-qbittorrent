@@ -3,6 +3,7 @@ using Jellyfin.Plugin.QBittorrent.QBittorrent;
 using Jellyfin.Plugin.QBittorrent.QBittorrent.Authentication;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.QBittorrent;
@@ -39,6 +40,7 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
 
         serviceCollection.AddSingleton<IJellyfinLibraryService, JellyfinLibraryService>();
         serviceCollection.AddHostedService<TorrentCompletionMonitor>();
+        serviceCollection.AddSingleton<IStartupFilter, SidebarScriptStartupFilter>();
     }
 
     private static PluginConfiguration GetConfiguration() => Plugin.Instance!.Configuration;
